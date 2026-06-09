@@ -230,6 +230,7 @@
 .shockwave-week-floating-actions .shockwave-week-today-btn,
 .shockwave-week-floating-actions .shockwave-row-height-handle {
   pointer-events: auto;
+  touch-action: none;
 }
 
 .sw-shortcut-floating-tooltip {
@@ -388,6 +389,7 @@
   cursor: col-resize;
   z-index: 30;
   background: transparent;
+  touch-action: none;
 }
 
 .sw-col-resize-handle:hover,
@@ -405,11 +407,24 @@
   cursor: col-resize;
   z-index: 40;
   background: transparent;
+  touch-action: none;
 }
 
 .sw-day-resize-handle:hover,
 .sw-day-resize-handle:active {
   background: rgba(234, 67, 53, 0.5);
+}
+
+@media (max-width: 768px) {
+  .sw-col-resize-handle,
+  .sw-day-resize-handle {
+    width: 16px;
+    transform: translateX(-8px);
+  }
+
+  .sw-day-resize-handle {
+    right: -8px;
+  }
 }
 
 /* 스케줄 행 */

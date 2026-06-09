@@ -65,6 +65,8 @@ const PATIENT_HISTORY_GROUPS = [
   { key: 'manual', label: '도수치료 내역' },
 ];
 
+const MOBILE_DOUBLE_TAP_MS = 320;
+
 const stepContextMenuVisitValue = (value, delta) => {
   const normalized = normalizeVisitInputValue(value);
 
@@ -308,6 +310,7 @@ const MemoizedCell = memo(({
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef
 }) => {
   const resizerRef = useRef(null);
+  const lastTouchEndRef = useRef(0);
   const content = pendingContent || '';
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
   const cellMemoList = getMemoListFromMergeSpan(effectiveMergeSpan);
@@ -404,6 +407,26 @@ const MemoizedCell = memo(({
   }
 
   const showInput = isPrimary || isEditing;
+  const openCellContextMenu = useCallback((event) => {
+    handleCellContextMenu(event, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
+  }, [cellPrescription, colIdx, dayIdx, handleCellContextMenu, rowIdx, slotInfo.label, slotInfo.time, weekIdx]);
+
+  const handleCellTouchEnd = useCallback((event) => {
+    const now = Date.now();
+    const elapsed = now - lastTouchEndRef.current;
+    lastTouchEndRef.current = now;
+    if (elapsed <= MOBILE_DOUBLE_TAP_MS) {
+      const touch = event.changedTouches?.[0] || event.touches?.[0];
+      event.preventDefault();
+      event.stopPropagation();
+      openCellContextMenu({
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        clientX: touch?.clientX ?? 0,
+        clientY: touch?.clientY ?? 0,
+      });
+    }
+  }, [openCellContextMenu]);
 
   if (showInput) {
     return (
@@ -415,9 +438,8 @@ const MemoizedCell = memo(({
         }}
         onMouseLeave={() => setHoverCell(null)}
         onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
-        onContextMenu={(e) => {
-          handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
-        }}
+        onTouchEnd={handleCellTouchEnd}
+        onContextMenu={openCellContextMenu}
       >
         {!isEditing && !isImePreview && (
           <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
@@ -500,9 +522,8 @@ const MemoizedCell = memo(({
         }}
         onMouseLeave={() => setHoverCell(null)}
         onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
-        onContextMenu={(e) => {
-          handleCellContextMenu(e, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
-        }}
+        onTouchEnd={handleCellTouchEnd}
+        onContextMenu={openCellContextMenu}
       >
         <div className="sw-cell-display">
           {displayData.hasDisplayText ? (
@@ -2017,6 +2038,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                   title={`행 높이 조절 (${rowHeight}px)`}
                   aria-label="시간 행 높이 조절"
                   onMouseDown={startRowResize}
+                  onTouchStart={startRowResize}
                 >
                   ↕
                 </button>
@@ -2121,6 +2143,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             transform: 'translateX(-4px)',
                           }}
                           onMouseDown={(e) => {
+                            startColResize(e, ci, timeColPx, activeColRatios);
+                          }}
+                          onTouchStart={(e) => {
                             startColResize(e, ci, timeColPx, activeColRatios);
                           }}
                         />
@@ -2230,6 +2255,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     <div
                       className="sw-day-resize-handle"
                       onMouseDown={(e) => {
+                        startDayResize(e, showTimeCol);
+                      }}
+                      onTouchStart={(e) => {
                         startDayResize(e, showTimeCol);
                       }}
                     />

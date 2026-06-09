@@ -143,6 +143,7 @@
   height: 100%;
   cursor: col-resize;
   z-index: 10;
+  touch-action: none;
 }
 .col-resizer:hover, .col-resizer:active {
   background: var(--brand-primary);
@@ -157,6 +158,7 @@
   height: 8px;
   cursor: row-resize;
   z-index: 10;
+  touch-action: none;
 }
 .row-resizer:hover, .row-resizer:active {
   background: var(--brand-primary);
@@ -171,6 +173,7 @@
   height: 8px;
   cursor: row-resize;
   z-index: 9;
+  touch-action: none;
 }
 
 .date-row-resizer:hover,
@@ -181,6 +184,19 @@
 
 .calendar-cell:nth-child(7n) {
   border-right: none;
+}
+
+@media (max-width: 768px) {
+  .col-resizer {
+    right: -8px;
+    width: 16px;
+  }
+
+  .row-resizer,
+  .date-row-resizer {
+    bottom: -8px;
+    height: 16px;
+  }
 }
 
 .calendar-cell.sunday {

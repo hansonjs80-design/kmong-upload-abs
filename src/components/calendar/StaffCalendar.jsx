@@ -44,6 +44,15 @@ const SHEETS_COLOR_GRID = [
 ];
 const SHEETS_STANDARD_COLORS = ['#000000', '#ffffff', '#4a86e8', '#e74c3c', '#f6c143', '#57a863', '#f97316', '#5fc0cc'];
 const DEFAULT_CUSTOM_COLORS = ['#93c47d', '#f6c143', '#d9d9d9', '#ead1dc', '#6aa84f', '#f97316'];
+const MOBILE_DOUBLE_TAP_MS = 320;
+
+const getPointerClient = (event) => {
+  const touch = event.touches?.[0] || event.changedTouches?.[0];
+  return {
+    x: touch?.clientX ?? event.clientX ?? 0,
+    y: touch?.clientY ?? event.clientY ?? 0,
+  };
+};
 
 function getStaffCalendarDisplayMemo(memo, isLastSlot) {
   const content = memo?.content || '';
@@ -164,6 +173,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const pendingCustomColorTypeRef = useRef(null);
   const dragRef = useRef(null);
   const pendingDragRef = useRef(null);
+  const lastTouchCellRef = useRef({ key: '', time: 0 });
   const hiddenInputRef = useRef(null);
   const skipNextBlurSaveRef = useRef(false);
 
@@ -297,57 +307,84 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   // ── Resize ──
   const startColResize = (e) => {
     e.preventDefault(); e.stopPropagation();
-    const sx = e.clientX, cw = colWidth || e.target.parentElement.offsetWidth;
+    const startPoint = getPointerClient(e);
+    const sx = startPoint.x, cw = colWidth || e.target.parentElement.offsetWidth;
     let latestWidth = colWidth || cw;
     const move = (ev) => {
-      latestWidth = Math.max(MIN_COL_WIDTH, cw + ev.clientX - sx);
+      ev.preventDefault?.();
+      const point = getPointerClient(ev);
+      latestWidth = Math.max(MIN_COL_WIDTH, cw + point.x - sx);
       setColWidth(latestWidth);
     };
     const up = () => {
       setColWidth(latestWidth);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', up);
+      window.removeEventListener('touchcancel', up);
       window.removeEventListener('blur', up);
     };
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', up);
+    window.addEventListener('touchcancel', up);
     window.addEventListener('blur', up);
   };
   const startRowResize = (e) => {
     e.preventDefault(); e.stopPropagation();
-    const sy = e.clientY, ch = rowHeight;
+    const startPoint = getPointerClient(e);
+    const sy = startPoint.y, ch = rowHeight;
     let latestHeight = rowHeight || ch;
     const move = (ev) => {
-      latestHeight = Math.max(MIN_ROW_HEIGHT, ch + ev.clientY - sy);
+      ev.preventDefault?.();
+      const point = getPointerClient(ev);
+      latestHeight = Math.max(MIN_ROW_HEIGHT, ch + point.y - sy);
       setRowHeight(latestHeight);
     };
     const up = () => {
       setRowHeight(latestHeight);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', up);
+      window.removeEventListener('touchcancel', up);
       window.removeEventListener('blur', up);
     };
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', up);
+    window.addEventListener('touchcancel', up);
     window.addEventListener('blur', up);
   };
   const startDateRowResize = (e) => {
     e.preventDefault(); e.stopPropagation();
-    const sy = e.clientY;
+    const startPoint = getPointerClient(e);
+    const sy = startPoint.y;
     const startHeight = dateRowHeight;
     let latestHeight = dateRowHeight || startHeight;
     const move = (ev) => {
-      latestHeight = Math.min(MAX_DATE_ROW_HEIGHT, Math.max(MIN_DATE_ROW_HEIGHT, startHeight + ev.clientY - sy));
+      ev.preventDefault?.();
+      const point = getPointerClient(ev);
+      latestHeight = Math.min(MAX_DATE_ROW_HEIGHT, Math.max(MIN_DATE_ROW_HEIGHT, startHeight + point.y - sy));
       setDateRowHeight(latestHeight);
     };
     const up = () => {
       setDateRowHeight(latestHeight);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', up);
+      window.removeEventListener('touchcancel', up);
       window.removeEventListener('blur', up);
     };
     window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', up);
+    window.addEventListener('touchcancel', up);
     window.addEventListener('blur', up);
   };
 
@@ -744,6 +781,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
 
   const onCellCtxMenu = useCallback((wi, di, slot, e) => {
     e.preventDefault();
+    e.stopPropagation?.();
     const cell = makeCell(wi, di, slot); if (!cell) return;
     if (!selectedKeys.has(cell.key)) selectSingle(cell);
     const MENU_W = 160; const MENU_H = 200;
@@ -753,6 +791,25 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     });
     setColorMenu(null);
   }, [makeCell, selectedKeys, selectSingle]);
+
+  const onCellTouchEnd = useCallback((wi, di, slot, e) => {
+    const cell = makeCell(wi, di, slot);
+    if (!cell) return;
+    const now = Date.now();
+    const last = lastTouchCellRef.current;
+    lastTouchCellRef.current = { key: cell.key, time: now };
+    if (last.key === cell.key && now - last.time <= MOBILE_DOUBLE_TAP_MS) {
+      const touch = e.changedTouches?.[0] || e.touches?.[0];
+      e.preventDefault();
+      e.stopPropagation();
+      onCellCtxMenu(wi, di, slot, {
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        clientX: touch?.clientX ?? 0,
+        clientY: touch?.clientY ?? 0,
+      });
+    }
+  }, [makeCell, onCellCtxMenu]);
 
   const openColorMenu = useCallback((type, event) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -1199,7 +1256,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         {WEEKDAYS.map((day, i) => (
           <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
             {day}
-            <div className="col-resizer" onMouseDown={startColResize} />
+            <div className="col-resizer" onMouseDown={startColResize} onTouchStart={startColResize} />
           </div>
         ))}
         {grid.map((week, wi) => week.map((dayInfo, di) => {
@@ -1219,6 +1276,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                   className="date-row-resizer"
                   title="날짜 셀 높이 조절"
                   onMouseDown={startDateRowResize}
+                  onTouchStart={startDateRowResize}
                 />
               </div>
               <div className="calendar-memos" style={{ gridTemplateRows: `repeat(${getSlotCount(wi)}, minmax(0, 1fr))` }}>
@@ -1252,12 +1310,13 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                       onMouseEnter={(e) => onCellMouseEnter(wi, di, slot, e)}
                       onDoubleClick={() => onCellDblClick(wi, di, slot)}
                       onContextMenu={(e) => onCellCtxMenu(wi, di, slot, e)}
+                      onTouchEnd={(e) => onCellTouchEnd(wi, di, slot, e)}
                     />
                   );
                 })}
               </div>
-              {di < 6 && <div className="col-resizer" onMouseDown={startColResize} />}
-              {wi < grid.length - 1 && <div className="row-resizer" onMouseDown={startRowResize} />}
+              {di < 6 && <div className="col-resizer" onMouseDown={startColResize} onTouchStart={startColResize} />}
+              {wi < grid.length - 1 && <div className="row-resizer" onMouseDown={startRowResize} onTouchStart={startRowResize} />}
             </div>
           );
         }))}

@@ -4,7 +4,7 @@ export default function MemoSlot({
   memo, dayInfo,
   isSelected, isPrimary, isEditing,
   clipboardMode, holidayName,
-  onMouseDown, onMouseEnter, onDoubleClick, onContextMenu,
+  onMouseDown, onMouseEnter, onDoubleClick, onContextMenu, onTouchEnd,
   cellId,
   autoFontColor,
   isDepartmentHidden = false,
@@ -51,6 +51,7 @@ export default function MemoSlot({
       onMouseEnter={onMouseEnter}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
+      onTouchEnd={onTouchEnd}
       title={isDepartmentHidden ? '' : content}
       style={inlineStyle}
     >

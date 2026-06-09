@@ -12,6 +12,14 @@ const MIN_SCHEDULE_ROW_HEIGHT = 14;
 const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_COL_RATIO = 0.2;
 
+const getPointerClient = (event) => {
+  const touch = event.touches?.[0] || event.changedTouches?.[0];
+  return {
+    x: touch?.clientX ?? event.clientX ?? 0,
+    y: touch?.clientY ?? event.clientY ?? 0,
+  };
+};
+
 export default function useScheduleResizeState({ colCount }) {
   const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
   const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
@@ -47,11 +55,14 @@ export default function useScheduleResizeState({ colCount }) {
   const startRowResize = useCallback((event) => {
     event.preventDefault();
     event.stopPropagation();
-    rowResizeRef.current = { active: true, startY: event.clientY, startHeight: rowHeight };
+    const startPoint = getPointerClient(event);
+    rowResizeRef.current = { active: true, startY: startPoint.y, startHeight: rowHeight };
     let latestHeight = rowHeight;
     const onMove = (moveEvent) => {
+      moveEvent.preventDefault?.();
       if (!rowResizeRef.current.active) return;
-      const delta = moveEvent.clientY - rowResizeRef.current.startY;
+      const point = getPointerClient(moveEvent);
+      const delta = point.y - rowResizeRef.current.startY;
       latestHeight = Math.max(MIN_SCHEDULE_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
       setRowHeight(latestHeight);
     };
@@ -60,31 +71,40 @@ export default function useScheduleResizeState({ colCount }) {
       setRowHeight(latestHeight); // Final write
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+      window.removeEventListener('touchcancel', onUp);
       window.removeEventListener('blur', onUp);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
   }, [rowHeight, setRowHeight]);
 
   const startColResize = useCallback((event, colIdx, timeColPx = 0, currentRatios = null) => {
     event.preventDefault();
     event.stopPropagation();
+    const startPoint = getPointerClient(event);
     const cur = currentRatios ? [...currentRatios] : Array(colCount).fill(1);
     const wrapper = event.currentTarget.closest('.sw-therapist-header-wrapper');
     const containerWidth = Math.max(1, (wrapper?.getBoundingClientRect().width || 1) - timeColPx);
     colResizeRef.current = {
       active: true,
       colIdx,
-      startX: event.clientX,
+      startX: startPoint.x,
       startRatios: [...cur],
       containerWidth,
     };
     let latestRatios = cur;
     const onMove = (moveEvent) => {
+      moveEvent.preventDefault?.();
       if (!colResizeRef.current.active) return;
       const { startRatios: startRatiosValue, containerWidth: width, colIdx: currentColIdx, startX } = colResizeRef.current;
-      const delta = moveEvent.clientX - startX;
+      const point = getPointerClient(moveEvent);
+      const delta = point.x - startX;
       const totalRatio = startRatiosValue.reduce((sum, ratio) => sum + ratio, 0);
       const deltaRatio = (delta / width) * totalRatio;
       const nextRatios = [...startRatiosValue];
@@ -110,26 +130,35 @@ export default function useScheduleResizeState({ colCount }) {
       });
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+      window.removeEventListener('touchcancel', onUp);
       window.removeEventListener('blur', onUp);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
   }, [colCount, setColRatios]);
 
   const startDayResize = useCallback((event, showTimeCol) => {
     event.preventDefault();
     event.stopPropagation();
+    const startPoint = getPointerClient(event);
     const dayElement = event.currentTarget.closest('.shockwave-day');
     const currentDayWidth = dayElement?.getBoundingClientRect().width || MIN_SCHEDULE_DAY_WIDTH;
     const normalizedDayWidth = showTimeCol
       ? Math.max(MIN_SCHEDULE_DAY_WIDTH, currentDayWidth - TIME_COL_WIDTH)
       : currentDayWidth;
-    dayResizeRef.current = { active: true, startX: event.clientX };
+    dayResizeRef.current = { active: true, startX: startPoint.x };
     let latestWidth = dayColWidth || normalizedDayWidth;
     const onMove = (moveEvent) => {
+      moveEvent.preventDefault?.();
       if (!dayResizeRef.current.active) return;
-      const delta = moveEvent.clientX - dayResizeRef.current.startX;
+      const point = getPointerClient(moveEvent);
+      const delta = point.x - dayResizeRef.current.startX;
       latestWidth = Math.max(MIN_SCHEDULE_DAY_WIDTH, normalizedDayWidth + delta);
       setDayColWidth(latestWidth);
     };
@@ -138,10 +167,16 @@ export default function useScheduleResizeState({ colCount }) {
       setDayColWidth(latestWidth); // Final write
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+      window.removeEventListener('touchcancel', onUp);
       window.removeEventListener('blur', onUp);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
   }, [dayColWidth, setDayColWidth]);
 
