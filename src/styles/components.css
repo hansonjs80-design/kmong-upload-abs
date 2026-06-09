@@ -674,6 +674,28 @@
   filter: none;
 }
 
+@media (max-width: 768px) and (orientation: portrait) {
+  .top-tab:not(.active) {
+    justify-content: center;
+    min-width: 44px;
+    padding: 8px 12px 6px;
+  }
+
+  .top-tab:not(.active):hover {
+    padding: 8px 12px 6px;
+  }
+
+  .top-tab:not(.active) .top-tab-inner {
+    gap: 0;
+    justify-content: center;
+  }
+
+  .top-tab:not(.active) .top-tab-inner > span,
+  .top-tab:not(.active) .tab-content-switcher {
+    display: none;
+  }
+}
+
 .top-tab-with-date {
   position: relative;
 }
