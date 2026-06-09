@@ -488,6 +488,8 @@ const MemoizedCell = memo(({
         onTouchMove={handleCellTouchMove}
         onTouchEnd={handleCellTouchEnd}
         onTouchCancel={clearLongPressTimer}
+        onSelectStart={(e) => e.preventDefault()}
+        onDragStart={(e) => e.preventDefault()}
         onContextMenu={openCellContextMenu}
       >
         {!isEditing && !isImePreview && (
@@ -575,6 +577,8 @@ const MemoizedCell = memo(({
         onTouchMove={handleCellTouchMove}
         onTouchEnd={handleCellTouchEnd}
         onTouchCancel={clearLongPressTimer}
+        onSelectStart={(e) => e.preventDefault()}
+        onDragStart={(e) => e.preventDefault()}
         onContextMenu={openCellContextMenu}
       >
         <div className="sw-cell-display">

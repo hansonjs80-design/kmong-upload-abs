@@ -461,6 +461,10 @@
   min-width: 0;
   overflow: hidden;
   line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
 
 .sw-cell-display {
@@ -475,6 +479,9 @@
   justify-content: center;
   gap: 0;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .sw-cell-main,
@@ -484,6 +491,9 @@
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .sw-cell-visit-suffix {

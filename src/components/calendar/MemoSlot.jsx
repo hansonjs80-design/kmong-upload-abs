@@ -55,6 +55,8 @@ export default function MemoSlot({
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchCancel}
+      onSelectStart={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
       title={isDepartmentHidden ? '' : content}
       style={inlineStyle}
     >
