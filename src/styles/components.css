@@ -675,6 +675,43 @@
 }
 
 @media (max-width: 768px) {
+  .top-tabs-shell {
+    align-items: flex-end;
+    gap: 6px;
+    padding: 8px 8px 0;
+  }
+
+  .top-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .top-tabs-track {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .top-tabs-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .top-tabs-actions {
+    flex: 0 0 auto;
+    gap: 0;
+    padding-bottom: 7px;
+  }
+
+  .top-tabs-current-date {
+    display: none;
+  }
+
+  .top-tabs-actions .print-toggle {
+    width: 38px;
+    height: 38px;
+  }
+
   .top-tab:not(.active) {
     justify-content: center;
     min-width: 44px;

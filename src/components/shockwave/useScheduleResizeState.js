@@ -11,6 +11,7 @@ import {
 const MIN_SCHEDULE_ROW_HEIGHT = 14;
 const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_COL_RATIO = 0.2;
+const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
 
 const getPointerClient = (event) => {
   const touch = event.touches?.[0] || event.changedTouches?.[0];
@@ -20,9 +21,31 @@ const getPointerClient = (event) => {
   };
 };
 
+const isTouchResizeEvent = (event) => Boolean(event?.touches?.length || event?.changedTouches?.length);
+
+const getMobileResizeLocked = () => {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(MOBILE_RESIZE_LOCK_KEY) === 'true';
+};
+
+const setMobileResizeLocked = (locked) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(MOBILE_RESIZE_LOCK_KEY, locked ? 'true' : 'false');
+};
+
 const shouldStartMobileResize = (event) => {
-  if (!event.touches?.length) return true;
-  return window.confirm('너비/높이 조정을 시작할까요?');
+  if (!isTouchResizeEvent(event)) return true;
+  if (!getMobileResizeLocked()) return true;
+  const shouldUnlock = window.confirm('고정된 너비/높이 설정을 다시 조정할까요?');
+  if (shouldUnlock) setMobileResizeLocked(false);
+  return shouldUnlock;
+};
+
+const maybeLockMobileResize = (event) => {
+  if (event?.type !== 'touchend') return;
+  if (window.confirm('현재 너비/높이 설정을 고정하시겠습니까?')) {
+    setMobileResizeLocked(true);
+  }
 };
 
 export default function useScheduleResizeState({ colCount }) {
@@ -72,9 +95,10 @@ export default function useScheduleResizeState({ colCount }) {
       latestHeight = Math.max(MIN_SCHEDULE_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
       setRowHeight(latestHeight);
     };
-    const onUp = () => {
+    const onUp = (upEvent) => {
       rowResizeRef.current.active = false;
       setRowHeight(latestHeight); // Final write
+      maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       window.removeEventListener('touchmove', onMove);
@@ -126,7 +150,7 @@ export default function useScheduleResizeState({ colCount }) {
         return full;
       });
     };
-    const onUp = () => {
+    const onUp = (upEvent) => {
       colResizeRef.current.active = false;
       setColRatios(prev => {
         const full = Array.isArray(prev) ? [...prev] : [];
@@ -135,6 +159,7 @@ export default function useScheduleResizeState({ colCount }) {
         }
         return full;
       });
+      maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       window.removeEventListener('touchmove', onMove);
@@ -170,9 +195,10 @@ export default function useScheduleResizeState({ colCount }) {
       latestWidth = Math.max(MIN_SCHEDULE_DAY_WIDTH, normalizedDayWidth + delta);
       setDayColWidth(latestWidth);
     };
-    const onUp = () => {
+    const onUp = (upEvent) => {
       dayResizeRef.current.active = false;
       setDayColWidth(latestWidth); // Final write
+      maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       window.removeEventListener('touchmove', onMove);

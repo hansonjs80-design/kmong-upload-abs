@@ -46,6 +46,7 @@ const SHEETS_STANDARD_COLORS = ['#000000', '#ffffff', '#4a86e8', '#e74c3c', '#f6
 const DEFAULT_CUSTOM_COLORS = ['#93c47d', '#f6c143', '#d9d9d9', '#ead1dc', '#6aa84f', '#f97316'];
 const MOBILE_DOUBLE_TAP_MS = 320;
 const MOBILE_LONG_PRESS_MS = 520;
+const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
 
 const getPointerClient = (event) => {
   const touch = event.touches?.[0] || event.changedTouches?.[0];
@@ -55,9 +56,31 @@ const getPointerClient = (event) => {
   };
 };
 
+const isTouchResizeEvent = (event) => Boolean(event?.touches?.length || event?.changedTouches?.length);
+
+const getMobileResizeLocked = () => {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(MOBILE_RESIZE_LOCK_KEY) === 'true';
+};
+
+const setMobileResizeLocked = (locked) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(MOBILE_RESIZE_LOCK_KEY, locked ? 'true' : 'false');
+};
+
 const shouldStartMobileResize = (event) => {
-  if (!event.touches?.length) return true;
-  return window.confirm('너비/높이 조정을 시작할까요?');
+  if (!isTouchResizeEvent(event)) return true;
+  if (!getMobileResizeLocked()) return true;
+  const shouldUnlock = window.confirm('고정된 너비/높이 설정을 다시 조정할까요?');
+  if (shouldUnlock) setMobileResizeLocked(false);
+  return shouldUnlock;
+};
+
+const maybeLockMobileResize = (event) => {
+  if (event?.type !== 'touchend') return;
+  if (window.confirm('현재 너비/높이 설정을 고정하시겠습니까?')) {
+    setMobileResizeLocked(true);
+  }
 };
 
 function getStaffCalendarDisplayMemo(memo, isLastSlot) {
@@ -326,8 +349,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       latestWidth = Math.max(MIN_COL_WIDTH, cw + point.x - sx);
       setColWidth(latestWidth);
     };
-    const up = () => {
+    const up = (upEvent) => {
       setColWidth(latestWidth);
+      maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('touchmove', move);
@@ -354,8 +378,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       latestHeight = Math.max(MIN_ROW_HEIGHT, ch + point.y - sy);
       setRowHeight(latestHeight);
     };
-    const up = () => {
+    const up = (upEvent) => {
       setRowHeight(latestHeight);
+      maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('touchmove', move);
@@ -383,8 +408,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
       latestHeight = Math.min(MAX_DATE_ROW_HEIGHT, Math.max(MIN_DATE_ROW_HEIGHT, startHeight + point.y - sy));
       setDateRowHeight(latestHeight);
     };
-    const up = () => {
+    const up = (upEvent) => {
       setDateRowHeight(latestHeight);
+      maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
       window.removeEventListener('touchmove', move);
