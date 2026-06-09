@@ -155,18 +155,22 @@ export function normalizeScheduleKeysToMergeMasters({
 
 export function buildScheduleRangeKeys(anchor, target) {
   if (!anchor || !target) return new Set();
-  if (anchor.w !== target.w || anchor.d !== target.d) {
+  if (anchor.w !== target.w) {
     return new Set([getScheduleCellKey(target.w, target.d, target.r, target.c)]);
   }
 
+  const dMin = Math.min(anchor.d, target.d);
+  const dMax = Math.max(anchor.d, target.d);
   const rMin = Math.min(anchor.r, target.r);
   const rMax = Math.max(anchor.r, target.r);
   const cMin = Math.min(anchor.c, target.c);
   const cMax = Math.max(anchor.c, target.c);
   const keys = new Set();
-  for (let r = rMin; r <= rMax; r += 1) {
-    for (let c = cMin; c <= cMax; c += 1) {
-      keys.add(getScheduleCellKey(anchor.w, anchor.d, r, c));
+  for (let d = dMin; d <= dMax; d += 1) {
+    for (let r = rMin; r <= rMax; r += 1) {
+      for (let c = cMin; c <= cMax; c += 1) {
+        keys.add(getScheduleCellKey(anchor.w, d, r, c));
+      }
     }
   }
   return keys;

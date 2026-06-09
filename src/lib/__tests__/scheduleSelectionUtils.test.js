@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildScheduleRangeKeys,
   computeScheduleSelectionInfo,
   getEffectiveScheduleMergeSpan,
   normalizeScheduleCellToMergeMaster,
@@ -96,6 +97,20 @@ describe('schedule selection merge helpers', () => {
         memos,
       }),
       new Set(['0-0-0-0'])
+    );
+  });
+
+  it('builds a rectangular range across dates in the same week', () => {
+    assert.deepEqual(
+      buildScheduleRangeKeys(
+        { w: 0, d: 1, r: 2, c: 1 },
+        { w: 0, d: 3, r: 3, c: 2 }
+      ),
+      new Set([
+        '0-1-2-1', '0-1-2-2', '0-1-3-1', '0-1-3-2',
+        '0-2-2-1', '0-2-2-2', '0-2-3-1', '0-2-3-2',
+        '0-3-2-1', '0-3-2-2', '0-3-3-1', '0-3-3-2',
+      ])
     );
   });
 });
