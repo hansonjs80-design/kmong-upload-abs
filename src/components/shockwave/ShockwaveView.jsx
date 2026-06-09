@@ -86,7 +86,35 @@ const getTimeLabelMinutes = (slotInfo = {}) => {
   return Number(match[2]);
 };
 
-// Removed shouldHideCompactTimeLabel and getCompactTimeLabelRowSpan to enforce consistent grid layout
+/**
+ * 컴팩트 모드(rowHeight ≤ COMPACT_TIME_LABEL_ROW_HEIGHT)에서
+ * 정시(:00)가 아닌 시간 슬롯의 레이블을 숨길지 여부를 반환합니다.
+ */
+const shouldHideCompactTimeLabel = (slotInfo, rh) => {
+  if (Number(rh) > COMPACT_TIME_LABEL_ROW_HEIGHT) return false;
+  const minutes = getTimeLabelMinutes(slotInfo);
+  if (minutes === null) return false;
+  return minutes !== 0;
+};
+
+/**
+ * 컴팩트 모드에서 정시(:00) 시간 셀이 다음 정시까지 몇 행을 span해야 하는지 계산합니다.
+ * 숨겨지는 행들을 시각적으로 하나의 병합된 시간 셀로 표현합니다.
+ */
+const getCompactTimeLabelRowSpan = (slotRenderIndex, daySlots, rh) => {
+  if (Number(rh) > COMPACT_TIME_LABEL_ROW_HEIGHT) return 1;
+  const currentSlot = daySlots[slotRenderIndex];
+  const currentMinutes = getTimeLabelMinutes(currentSlot);
+  if (currentMinutes === null || currentMinutes !== 0) return 1;
+  // 다음 정시(:00) 슬롯까지의 행 수를 계산
+  let span = 1;
+  for (let i = slotRenderIndex + 1; i < daySlots.length; i++) {
+    const nextMinutes = getTimeLabelMinutes(daySlots[i]);
+    if (nextMinutes === 0) break;
+    span++;
+  }
+  return span;
+};
 
 const isCompactScheduleRowHeight = (rowHeight) => (
   Number(rowHeight) > 0 && Number(rowHeight) <= COMPACT_EDITING_INPUT_ROW_HEIGHT
@@ -335,7 +363,9 @@ const MemoizedCell = memo(({
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef,
   compactEditingInput,
   visitOnLowerRowByPrescription = {},
-  overrideVisitSuffix
+  overrideVisitSuffix,
+  onCellTouchDrag,
+  onCellTouchDragEnd
 }) => {
   const resizerRef = useRef(null);
   const lastTouchEndRef = useRef(0);
@@ -484,55 +514,15 @@ const MemoizedCell = memo(({
     if (Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > 10) {
       clearLongPressTimer();
     }
-
-    tooltipMousePosRef.current = { x: touch.clientX, y: touch.clientY };
-
-    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-    const cellElement = targetElement?.closest('.sw-cell');
-    
-    if (cellElement) {
-      const cellKeyStr = cellElement.getAttribute('data-cell-key') || cellElement.id.replace('cell-', '');
-      if (cellKeyStr && cellKeyStr !== lastTouchDragCellRef.current) {
-        lastTouchDragCellRef.current = cellKeyStr;
-        
-        const [w, d, r, c] = cellKeyStr.split('-').map(Number);
-        if (!isNaN(w) && !isNaN(d) && !isNaN(r) && !isNaN(c)) {
-          const dayInfo = weeks[w][d];
-          const slotInfo = getTimeSlotsForDay(dayInfo)[r];
-          const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
-          const therapistName = getTherapistNameForDate(c, dayInfo.day) || '';
-          const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
-          
-          setHoverCell({ weekIdx: w, dayIdx: d, rowIdx: r, colIdx: c, staffBlockRule, slotInfo, isMergedView: false });
-          selectSingleCell({ w, d, r, c });
-        }
-      }
-      
-      // Update tooltip position smoothly during drag
-      if (tooltipRef.current) {
-        const tooltipEl = tooltipRef.current;
-        const offset = 14;
-        const edgePadding = 8;
-        const { width, height } = tooltipEl.getBoundingClientRect();
-        let left = touch.clientX + offset;
-        let top = touch.clientY + offset;
-        
-        if (left + width + edgePadding > window.innerWidth) left = touch.clientX - width - offset;
-        if (top + height + edgePadding > window.innerHeight) top = touch.clientY - height - offset;
-        if (top < edgePadding) top = edgePadding;
-        
-        left = Math.min(Math.max(edgePadding, left), Math.max(edgePadding, window.innerWidth - width - edgePadding));
-        top = Math.min(Math.max(edgePadding, top), Math.max(edgePadding, window.innerHeight - height - edgePadding));
-        
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.style.top = `${top}px`;
-      }
+    if (onCellTouchDrag) {
+      onCellTouchDrag(touch.clientX, touch.clientY);
     }
-  }, [clearLongPressTimer, weeks, getTimeSlotsForDay, getTherapistNameForDate, getStaffScheduleBlockForCell, setHoverCell, selectSingleCell]);
+  }, [clearLongPressTimer, onCellTouchDrag]);
 
   const handleCellTouchEnd = useCallback((event) => {
-    lastTouchPosRef.current.active = false;
-    lastTouchDragCellRef.current = null;
+    if (onCellTouchDragEnd) {
+      onCellTouchDragEnd();
+    }
     clearLongPressTimer();
     if (longPressTriggeredRef.current) {
       event.preventDefault();
@@ -1279,8 +1269,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const scheduleEditDraftAutosave = useCallback((key, value) => {
     setPendingDisplayValues((prev) => ({ ...prev, [key]: value ?? '' }));
     editDraftRef.current = { key, value: value ?? '', dirty: true };
-    // DB 저장은 handleCellSave(편집 완료 시)에서 처방 정보와 함께 수행.
-    // 여기서 미리 저장하면 처방 없이 저장되어 노란색 '처방 없음'이 잠깐 보이는 문제 발생.
     if (editAutosaveTimerRef.current) {
       clearTimeout(editAutosaveTimerRef.current);
       editAutosaveTimerRef.current = null;
@@ -2093,6 +2081,41 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
   }, []);
 
+  const handleCellTouchDrag = useCallback((clientX, clientY) => {
+    lastTouchPosRef.current = { active: true, x: clientX, y: clientY };
+
+    const targetElement = document.elementFromPoint(clientX, clientY);
+    const cellElement = targetElement?.closest('.sw-cell');
+    
+    if (cellElement) {
+      const cellKeyStr = cellElement.getAttribute('data-cell-key') || cellElement.id.replace('cell-', '');
+      if (cellKeyStr && cellKeyStr !== lastTouchDragCellRef.current) {
+        lastTouchDragCellRef.current = cellKeyStr;
+        
+        const [w, d, r, c] = cellKeyStr.split('-').map(Number);
+        if (!isNaN(w) && !isNaN(d) && !isNaN(r) && !isNaN(c)) {
+          const dayInfo = weeks[w][d];
+          const slotInfo = getTimeSlotsForDay(dayInfo)[r];
+          const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
+          const therapistName = getTherapistNameForDate(c, dayInfo.day) || '';
+          const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
+          
+          setHoverCell({ weekIdx: w, dayIdx: d, rowIdx: r, colIdx: c, staffBlockRule, slotInfo, isMergedView: false });
+          selectSingleCell({ w, d, r, c });
+        }
+      }
+      
+      if (tooltipRef.current && positionTooltipRef.current) {
+        positionTooltipRef.current(clientX, clientY);
+      }
+    }
+  }, [weeks, getTimeSlotsForDay, getTherapistNameForDate, getStaffScheduleBlockForCell, setHoverCell, selectSingleCell]);
+
+  const handleCellTouchDragEnd = useCallback(() => {
+    lastTouchPosRef.current.active = false;
+    lastTouchDragCellRef.current = null;
+  }, []);
+
   // 편집 완료 후 아래로 이동
   const handleEditKeyDown = useCallback((e, w, d, r, c) => {
     if (['ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -2435,21 +2458,35 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       
                       // 1. Time Label
                       if (showTimeCol) {
-                        elements.push(
-                          <div
-                            key={`time-${rowIdx}`}
-                            className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}
-                            data-time-row={`${weekIdx}-${rowIdx}`}
-                            data-time-label={slotInfo.label}
-                            style={{
-                              gridColumn: '1',
-                              gridRow: `${gridRowStart}`,
-                              borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
-                            }}
-                          >
-                            <span>{slotInfo.label}</span>
-                          </div>
-                        );
+                        const hideLabel = shouldHideCompactTimeLabel(slotInfo, rowHeight);
+                        if (!hideLabel) {
+                          const timeLabelSpan = getCompactTimeLabelRowSpan(slotRenderIndex, daySlots, rowHeight);
+                          const isMerged = timeLabelSpan > 1;
+                          const gridRowEnd = isMerged
+                            ? gridRowStart + timeLabelSpan
+                            : gridRowStart + 1;
+                          // 병합된 시간 셀의 마지막 행이 전체 마지막 행인지 체크
+                          const mergedLastRow = isMerged
+                            ? (slotRenderIndex + timeLabelSpan - 1) >= daySlots.length - 1
+                            : isLastRenderedRow;
+                          const labelHour = slotInfo.label?.replace(/:.*/, '') || '';
+                          elements.push(
+                            <div
+                              key={`time-${rowIdx}`}
+                              className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}${isMerged ? ' sw-time-label--merged' : ''}`}
+                              data-time-row={`${weekIdx}-${rowIdx}`}
+                              data-time-label={slotInfo.label}
+                              style={{
+                                gridColumn: '1',
+                                gridRow: `${gridRowStart} / ${gridRowEnd}`,
+                                borderBottom: mergedLastRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
+                              }}
+                            >
+                              <span>{isMerged ? labelHour : slotInfo.label}</span>
+                            </div>
+                          );
+                        }
+                        // hideLabel === true: 이 행의 시간 셀은 위의 병합된 셀이 커버하므로 렌더링 안 함
                       }
 
                       // 2. Cells
@@ -2542,6 +2579,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               compactEditingInput={isCompactScheduleRowHeight(rowHeight)}
                               visitOnLowerRowByPrescription={visitOnLowerRowByPrescription}
                               overrideVisitSuffix={overrideVisitSuffix}
+                              onCellTouchDrag={handleCellTouchDrag}
+                              onCellTouchDragEnd={handleCellTouchDragEnd}
                             />
                           );
                         }
