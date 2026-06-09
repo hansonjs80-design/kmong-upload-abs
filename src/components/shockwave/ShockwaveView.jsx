@@ -79,41 +79,37 @@ const MOBILE_LONG_PRESS_MS = 520;
 const COMPACT_TIME_LABEL_ROW_HEIGHT = 18;
 const COMPACT_EDITING_INPUT_ROW_HEIGHT = 10;
 
-const getTimeLabelMinutes = (slotInfo = {}) => {
-  const raw = String(slotInfo.time || slotInfo.label || '').trim();
-  const match = raw.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return null;
-  return Number(match[2]);
-};
-
 /**
- * 컴팩트 모드(rowHeight ≤ COMPACT_TIME_LABEL_ROW_HEIGHT)에서
- * 정시(:00)가 아닌 시간 슬롯의 레이블을 숨길지 여부를 반환합니다.
+ * 행 높이에 따라 시간 레이블을 읽을 수 있도록 몇 개 행을 병합할지 계산합니다.
+ * 예: 10분 간격, rowHeight=8px → 2행 병합 (20분 단위 표시)
+ *     10분 간격, rowHeight=5px → 3행 병합 (30분 단위 표시)
  */
-const shouldHideCompactTimeLabel = (slotInfo, rh) => {
-  if (Number(rh) > COMPACT_TIME_LABEL_ROW_HEIGHT) return false;
-  const minutes = getTimeLabelMinutes(slotInfo);
-  if (minutes === null) return false;
-  return minutes !== 0;
+const MIN_READABLE_TIME_LABEL_HEIGHT = 14;
+
+const getCompactMergeInterval = (rh) => {
+  const rowH = Number(rh);
+  if (!rowH || rowH <= 0 || rowH >= MIN_READABLE_TIME_LABEL_HEIGHT) return 1;
+  return Math.ceil(MIN_READABLE_TIME_LABEL_HEIGHT / rowH);
 };
 
 /**
- * 컴팩트 모드에서 정시(:00) 시간 셀이 다음 정시까지 몇 행을 span해야 하는지 계산합니다.
- * 숨겨지는 행들을 시각적으로 하나의 병합된 시간 셀로 표현합니다.
+ * 이 슬롯의 시간 레이블을 숨길지 여부 (이전 병합 셀에 포함됨)
+ */
+const shouldHideCompactTimeLabel = (slotRenderIndex, rh) => {
+  const mergeInterval = getCompactMergeInterval(rh);
+  if (mergeInterval <= 1) return false;
+  return (slotRenderIndex % mergeInterval) !== 0;
+};
+
+/**
+ * 보이는 시간 레이블이 몇 행을 span해야 하는지 계산
  */
 const getCompactTimeLabelRowSpan = (slotRenderIndex, daySlots, rh) => {
-  if (Number(rh) > COMPACT_TIME_LABEL_ROW_HEIGHT) return 1;
-  const currentSlot = daySlots[slotRenderIndex];
-  const currentMinutes = getTimeLabelMinutes(currentSlot);
-  if (currentMinutes === null || currentMinutes !== 0) return 1;
-  // 다음 정시(:00) 슬롯까지의 행 수를 계산
-  let span = 1;
-  for (let i = slotRenderIndex + 1; i < daySlots.length; i++) {
-    const nextMinutes = getTimeLabelMinutes(daySlots[i]);
-    if (nextMinutes === 0) break;
-    span++;
-  }
-  return span;
+  const mergeInterval = getCompactMergeInterval(rh);
+  if (mergeInterval <= 1) return 1;
+  if ((slotRenderIndex % mergeInterval) !== 0) return 1;
+  // daySlots 끝을 넘지 않도록 제한
+  return Math.min(mergeInterval, daySlots.length - slotRenderIndex);
 };
 
 const isCompactScheduleRowHeight = (rowHeight) => (
@@ -2458,7 +2454,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       
                       // 1. Time Label
                       if (showTimeCol) {
-                        const hideLabel = shouldHideCompactTimeLabel(slotInfo, rowHeight);
+                        const hideLabel = shouldHideCompactTimeLabel(slotRenderIndex, rowHeight);
                         if (!hideLabel) {
                           const timeLabelSpan = getCompactTimeLabelRowSpan(slotRenderIndex, daySlots, rowHeight);
                           const isMerged = timeLabelSpan > 1;
@@ -2469,7 +2465,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           const mergedLastRow = isMerged
                             ? (slotRenderIndex + timeLabelSpan - 1) >= daySlots.length - 1
                             : isLastRenderedRow;
-                          const labelHour = slotInfo.label?.replace(/:.*/, '') || '';
                           elements.push(
                             <div
                               key={`time-${rowIdx}`}
@@ -2482,7 +2477,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                                 borderBottom: mergedLastRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                               }}
                             >
-                              <span>{isMerged ? labelHour : slotInfo.label}</span>
+                              <span>{slotInfo.label}</span>
                             </div>
                           );
                         }
