@@ -674,7 +674,7 @@
   filter: none;
 }
 
-@media (max-width: 768px) and (orientation: portrait) {
+@media (max-width: 768px) {
   .top-tab:not(.active) {
     justify-content: center;
     min-width: 44px;

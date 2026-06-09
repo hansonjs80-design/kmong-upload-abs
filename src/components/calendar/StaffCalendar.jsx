@@ -45,6 +45,7 @@ const SHEETS_COLOR_GRID = [
 const SHEETS_STANDARD_COLORS = ['#000000', '#ffffff', '#4a86e8', '#e74c3c', '#f6c143', '#57a863', '#f97316', '#5fc0cc'];
 const DEFAULT_CUSTOM_COLORS = ['#93c47d', '#f6c143', '#d9d9d9', '#ead1dc', '#6aa84f', '#f97316'];
 const MOBILE_DOUBLE_TAP_MS = 320;
+const MOBILE_LONG_PRESS_MS = 520;
 
 const getPointerClient = (event) => {
   const touch = event.touches?.[0] || event.changedTouches?.[0];
@@ -174,6 +175,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   const dragRef = useRef(null);
   const pendingDragRef = useRef(null);
   const lastTouchCellRef = useRef({ key: '', time: 0 });
+  const longPressTimerRef = useRef(null);
+  const longPressTouchRef = useRef({ key: '', wi: 0, di: 0, slot: 0, x: 0, y: 0 });
+  const longPressTriggeredRef = useRef(false);
   const hiddenInputRef = useRef(null);
   const skipNextBlurSaveRef = useRef(false);
 
@@ -792,24 +796,67 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
     setColorMenu(null);
   }, [makeCell, selectedKeys, selectSingle]);
 
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const onCellTouchStart = useCallback((wi, di, slot, e) => {
+    if (e.touches?.length > 1) {
+      clearLongPressTimer();
+      return;
+    }
+
+    const cell = makeCell(wi, di, slot);
+    const touch = e.touches?.[0];
+    if (!cell || !touch) return;
+
+    longPressTriggeredRef.current = false;
+    longPressTouchRef.current = { key: cell.key, wi, di, slot, x: touch.clientX, y: touch.clientY };
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      onCellCtxMenu(wi, di, slot, {
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+      });
+    }, MOBILE_LONG_PRESS_MS);
+  }, [clearLongPressTimer, makeCell, onCellCtxMenu]);
+
+  const onCellTouchMove = useCallback((e) => {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    const start = longPressTouchRef.current;
+    if (Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > 10) {
+      clearLongPressTimer();
+    }
+  }, [clearLongPressTimer]);
+
   const onCellTouchEnd = useCallback((wi, di, slot, e) => {
+    clearLongPressTimer();
+    if (longPressTriggeredRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      longPressTriggeredRef.current = false;
+      lastTouchCellRef.current = { key: '', time: 0 };
+      return;
+    }
+
     const cell = makeCell(wi, di, slot);
     if (!cell) return;
     const now = Date.now();
     const last = lastTouchCellRef.current;
     lastTouchCellRef.current = { key: cell.key, time: now };
     if (last.key === cell.key && now - last.time <= MOBILE_DOUBLE_TAP_MS) {
-      const touch = e.changedTouches?.[0] || e.touches?.[0];
       e.preventDefault();
       e.stopPropagation();
-      onCellCtxMenu(wi, di, slot, {
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        clientX: touch?.clientX ?? 0,
-        clientY: touch?.clientY ?? 0,
-      });
+      onCellDblClick(wi, di, slot);
     }
-  }, [makeCell, onCellCtxMenu]);
+  }, [clearLongPressTimer, makeCell, onCellDblClick]);
 
   const openColorMenu = useCallback((type, event) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -1310,7 +1357,10 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                       onMouseEnter={(e) => onCellMouseEnter(wi, di, slot, e)}
                       onDoubleClick={() => onCellDblClick(wi, di, slot)}
                       onContextMenu={(e) => onCellCtxMenu(wi, di, slot, e)}
+                      onTouchStart={(e) => onCellTouchStart(wi, di, slot, e)}
+                      onTouchMove={onCellTouchMove}
                       onTouchEnd={(e) => onCellTouchEnd(wi, di, slot, e)}
+                      onTouchCancel={clearLongPressTimer}
                     />
                   );
                 })}

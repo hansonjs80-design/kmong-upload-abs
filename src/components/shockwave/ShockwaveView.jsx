@@ -66,6 +66,7 @@ const PATIENT_HISTORY_GROUPS = [
 ];
 
 const MOBILE_DOUBLE_TAP_MS = 320;
+const MOBILE_LONG_PRESS_MS = 520;
 
 const stepContextMenuVisitValue = (value, delta) => {
   const normalized = normalizeVisitInputValue(value);
@@ -311,6 +312,9 @@ const MemoizedCell = memo(({
 }) => {
   const resizerRef = useRef(null);
   const lastTouchEndRef = useRef(0);
+  const longPressTimerRef = useRef(null);
+  const longPressTriggeredRef = useRef(false);
+  const touchStartPointRef = useRef({ x: 0, y: 0 });
   const content = pendingContent || '';
   const effectiveMergeSpan = pendingMergeSpan || mergeSpan;
   const cellMemoList = getMemoListFromMergeSpan(effectiveMergeSpan);
@@ -411,22 +415,64 @@ const MemoizedCell = memo(({
     handleCellContextMenu(event, weekIdx, dayIdx, rowIdx, colIdx, cellPrescription, slotInfo.time || slotInfo.label);
   }, [cellPrescription, colIdx, dayIdx, handleCellContextMenu, rowIdx, slotInfo.label, slotInfo.time, weekIdx]);
 
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleCellTouchStart = useCallback((event) => {
+    if (event.touches?.length > 1) {
+      clearLongPressTimer();
+      return;
+    }
+
+    const touch = event.touches?.[0];
+    if (!touch) return;
+
+    longPressTriggeredRef.current = false;
+    touchStartPointRef.current = { x: touch.clientX, y: touch.clientY };
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      openCellContextMenu({
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+      });
+    }, MOBILE_LONG_PRESS_MS);
+  }, [clearLongPressTimer, openCellContextMenu]);
+
+  const handleCellTouchMove = useCallback((event) => {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    const start = touchStartPointRef.current;
+    if (Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > 10) {
+      clearLongPressTimer();
+    }
+  }, [clearLongPressTimer]);
+
   const handleCellTouchEnd = useCallback((event) => {
+    clearLongPressTimer();
+    if (longPressTriggeredRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      longPressTriggeredRef.current = false;
+      lastTouchEndRef.current = 0;
+      return;
+    }
+
     const now = Date.now();
     const elapsed = now - lastTouchEndRef.current;
     lastTouchEndRef.current = now;
     if (elapsed <= MOBILE_DOUBLE_TAP_MS) {
-      const touch = event.changedTouches?.[0] || event.touches?.[0];
       event.preventDefault();
       event.stopPropagation();
-      openCellContextMenu({
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        clientX: touch?.clientX ?? 0,
-        clientY: touch?.clientY ?? 0,
-      });
+      handleCellDoubleClick(event, weekIdx, dayIdx, rowIdx, colIdx, content);
     }
-  }, [openCellContextMenu]);
+  }, [clearLongPressTimer, colIdx, content, dayIdx, handleCellDoubleClick, rowIdx, weekIdx]);
 
   if (showInput) {
     return (
@@ -438,7 +484,10 @@ const MemoizedCell = memo(({
         }}
         onMouseLeave={() => setHoverCell(null)}
         onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
+        onTouchStart={handleCellTouchStart}
+        onTouchMove={handleCellTouchMove}
         onTouchEnd={handleCellTouchEnd}
+        onTouchCancel={clearLongPressTimer}
         onContextMenu={openCellContextMenu}
       >
         {!isEditing && !isImePreview && (
@@ -522,7 +571,10 @@ const MemoizedCell = memo(({
         }}
         onMouseLeave={() => setHoverCell(null)}
         onDoubleClick={(e) => { handleCellDoubleClick(e, weekIdx, dayIdx, rowIdx, colIdx, content); }}
+        onTouchStart={handleCellTouchStart}
+        onTouchMove={handleCellTouchMove}
         onTouchEnd={handleCellTouchEnd}
+        onTouchCancel={clearLongPressTimer}
         onContextMenu={openCellContextMenu}
       >
         <div className="sw-cell-display">
