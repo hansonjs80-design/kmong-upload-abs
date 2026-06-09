@@ -20,6 +20,11 @@ const getPointerClient = (event) => {
   };
 };
 
+const shouldStartMobileResize = (event) => {
+  if (!event.touches?.length) return true;
+  return window.confirm('너비/높이 조정을 시작할까요?');
+};
+
 export default function useScheduleResizeState({ colCount }) {
   const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
   const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
@@ -55,6 +60,7 @@ export default function useScheduleResizeState({ colCount }) {
   const startRowResize = useCallback((event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!shouldStartMobileResize(event)) return;
     const startPoint = getPointerClient(event);
     rowResizeRef.current = { active: true, startY: startPoint.y, startHeight: rowHeight };
     let latestHeight = rowHeight;
@@ -87,6 +93,7 @@ export default function useScheduleResizeState({ colCount }) {
   const startColResize = useCallback((event, colIdx, timeColPx = 0, currentRatios = null) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!shouldStartMobileResize(event)) return;
     const startPoint = getPointerClient(event);
     const cur = currentRatios ? [...currentRatios] : Array(colCount).fill(1);
     const wrapper = event.currentTarget.closest('.sw-therapist-header-wrapper');
@@ -146,6 +153,7 @@ export default function useScheduleResizeState({ colCount }) {
   const startDayResize = useCallback((event, showTimeCol) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!shouldStartMobileResize(event)) return;
     const startPoint = getPointerClient(event);
     const dayElement = event.currentTarget.closest('.shockwave-day');
     const currentDayWidth = dayElement?.getBoundingClientRect().width || MIN_SCHEDULE_DAY_WIDTH;

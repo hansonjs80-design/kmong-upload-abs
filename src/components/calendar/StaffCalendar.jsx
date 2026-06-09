@@ -55,6 +55,11 @@ const getPointerClient = (event) => {
   };
 };
 
+const shouldStartMobileResize = (event) => {
+  if (!event.touches?.length) return true;
+  return window.confirm('너비/높이 조정을 시작할까요?');
+};
+
 function getStaffCalendarDisplayMemo(memo, isLastSlot) {
   const content = memo?.content || '';
   const trimmedContent = content.trim();
@@ -311,6 +316,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   // ── Resize ──
   const startColResize = (e) => {
     e.preventDefault(); e.stopPropagation();
+    if (!shouldStartMobileResize(e)) return;
     const startPoint = getPointerClient(e);
     const sx = startPoint.x, cw = colWidth || e.target.parentElement.offsetWidth;
     let latestWidth = colWidth || cw;
@@ -338,6 +344,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   };
   const startRowResize = (e) => {
     e.preventDefault(); e.stopPropagation();
+    if (!shouldStartMobileResize(e)) return;
     const startPoint = getPointerClient(e);
     const sy = startPoint.y, ch = rowHeight;
     let latestHeight = rowHeight || ch;
@@ -365,6 +372,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
   };
   const startDateRowResize = (e) => {
     e.preventDefault(); e.stopPropagation();
+    if (!shouldStartMobileResize(e)) return;
     const startPoint = getPointerClient(e);
     const sy = startPoint.y;
     const startHeight = dateRowHeight;
