@@ -2314,11 +2314,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .shockwave-row {
-  grid-template-columns: minmax(92px, 150px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
+  grid-template-columns: minmax(92px, 150px) minmax(72px, 86px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
 }
 
 .manual-therapy-row {
-  grid-template-columns: minmax(92px, 150px) minmax(70px, 90px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
+  grid-template-columns: minmax(92px, 150px) minmax(70px, 90px) minmax(72px, 86px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
 }
 
 .settlement-settings-header-row {
@@ -2366,6 +2366,29 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   font-weight: 800;
   white-space: nowrap;
   letter-spacing: -0.02em;
+}
+
+.settlement-duration-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.settlement-duration-input {
+  width: 54px;
+  height: 34px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 0 4px;
+  color: #166534;
+}
+
+.settlement-duration-unit {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-weight: 800;
 }
 
 .settlement-shortcut-group {
@@ -2465,11 +2488,11 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   }
 
   .shockwave-row {
-    grid-template-columns: 1fr 80px 1fr 34px 22px auto;
+    grid-template-columns: 1fr 76px 76px 1fr 34px 22px auto;
   }
   
   .manual-therapy-row {
-    grid-template-columns: 1fr 80px 80px 1fr 34px 22px auto;
+    grid-template-columns: 1fr 76px 76px 76px 1fr 34px 22px auto;
   }
 }
 

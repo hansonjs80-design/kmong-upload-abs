@@ -223,6 +223,7 @@ export default function usePatientHistoryActions({
   clearImmediateCellDisplay,
   setPatientHistoryModalOpen,
   setPatientHistoryModalData,
+  treatmentMergeOptions = {},
 }) {
   const patientHistoryResultCacheRef = useRef(new Map());
   const monthlyTherapistRowsCacheRef = useRef(new Map());
@@ -902,6 +903,7 @@ export default function usePatientHistoryActions({
       prescription: cellUpdate.prescription,
       bodyPart: cellUpdate.body_part || null,
       mergeSpan: cellUpdate.merge_span,
+      ...treatmentMergeOptions,
     });
     const savePayload = manualTherapyMerge.ok ? manualTherapyMerge.payload : [payload];
 
@@ -942,6 +944,7 @@ export default function usePatientHistoryActions({
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
+    treatmentMergeOptions,
   ]);
 
   return {

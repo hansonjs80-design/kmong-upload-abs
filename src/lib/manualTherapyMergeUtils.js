@@ -2,12 +2,44 @@ import { getScheduleCellKey, parseScheduleCellKey } from './scheduleSelectionUti
 import { buildScheduleCellPayload, markIntentionalClearPayload } from './scheduleMergeUtils.js';
 
 const DEFAULT_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
+const DEFAULT_INTERVAL_MINUTES = 20;
 
-export function getManualTherapyRowSpan(prescription) {
+export function normalizeTreatmentDurationMap(value = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.entries(value).reduce((acc, [key, rawValue]) => {
+    const prescription = String(key || '').trim();
+    const duration = Number(rawValue);
+    if (prescription && Number.isFinite(duration) && duration > 0) {
+      acc[prescription] = duration;
+    }
+    return acc;
+  }, {});
+}
+
+export function getTreatmentDurationMinutes(prescription, durationMinutesByPrescription = {}) {
   const text = String(prescription || '').trim();
-  if (text === '40분') return 2;
-  if (text === '60분') return 3;
-  return 1;
+  if (!text) return 0;
+
+  const durationMap = normalizeTreatmentDurationMap(durationMinutesByPrescription);
+  if (durationMap[text] > 0) return durationMap[text];
+
+  const numericMatch = text.match(/(\d{2,3})\s*분?/);
+  if (numericMatch) {
+    const inferred = Number(numericMatch[1]);
+    if (Number.isFinite(inferred) && inferred > 0) return inferred;
+  }
+
+  return 0;
+}
+
+export function getManualTherapyRowSpan(prescription, options = {}) {
+  const intervalMinutes = Number(options.intervalMinutes) || DEFAULT_INTERVAL_MINUTES;
+  const durationMinutes = getTreatmentDurationMinutes(
+    prescription,
+    options.durationMinutesByPrescription || {}
+  );
+  if (durationMinutes <= 0 || intervalMinutes <= 0) return 1;
+  return Math.max(1, Math.ceil(durationMinutes / intervalMinutes));
 }
 
 function normalizeMergeSpan(mergeSpan) {
@@ -56,10 +88,15 @@ export function buildManualTherapyMergePayload({
   prescription = '',
   bodyPart = null,
   mergeSpan,
+  intervalMinutes = DEFAULT_INTERVAL_MINUTES,
+  durationMinutesByPrescription = {},
 }) {
-  const targetRowSpan = getManualTherapyRowSpan(prescription);
+  const targetRowSpan = getManualTherapyRowSpan(prescription, {
+    intervalMinutes,
+    durationMinutesByPrescription,
+  });
   if (targetRowSpan <= 1) {
-    return { ok: false, reason: 'not-manual-therapy', payload: [], affectedKeys: [] };
+    return { ok: false, reason: 'not-treatment-duration', payload: [], affectedKeys: [] };
   }
 
   const { w, d, r, c } = parseScheduleCellKey(key);

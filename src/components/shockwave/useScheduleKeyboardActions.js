@@ -74,6 +74,7 @@ export default function useScheduleKeyboardActions({
   shockwaveSettings,
   getDefaultReservationTime,
   handleOpenBodyPartMenu,
+  treatmentMergeOptions = {},
 }) {
   // ── refs로 최신 값 추적 (연속 키 입력 시 stale closure 방지) ──
   const baseMemosRef = useRef(memos);
@@ -421,8 +422,7 @@ export default function useScheduleKeyboardActions({
 
         if (memo.prescription === targetPrescription && stableContent === updatedContent) continue;
 
-        const manualTherapyMerge = isManualTherapy
-          ? buildManualTherapyAutoMergePayload({
+        const manualTherapyMerge = buildManualTherapyAutoMergePayload({
             key,
             memos: latestMemos,
             pendingMergeSpans: pendingMergeSpansRef.current,
@@ -434,8 +434,8 @@ export default function useScheduleKeyboardActions({
             prescription: targetPrescription,
             bodyPart: memo.body_part || null,
             mergeSpan: pendingMergeSpansRef.current?.[key] || memo.merge_span,
+            ...treatmentMergeOptions,
           })
-          : { ok: false, reason: 'not-manual-therapy' };
 
         if (manualTherapyMerge.ok) {
           const undoSnapshot = buildSnapshotRef.current(manualTherapyMerge.affectedKeys);
@@ -452,7 +452,7 @@ export default function useScheduleKeyboardActions({
             applyCellDisplayRef.current?.(undoSnapshot);
             applyMergeSpanRef.current?.(undoSnapshot);
             applyPayloadToLatestRefs(undoSnapshot);
-            addToast?.('도수치료 자동 병합 저장에 실패했습니다.', 'error');
+            addToast?.('자동 병합 저장에 실패했습니다.', 'error');
           }
           continue;
         }
@@ -545,7 +545,7 @@ export default function useScheduleKeyboardActions({
     })();
 
     return true;
-  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, rowCount, selectedCell, shockwaveSettings, updateOpenContextMenuSnapshotFromPayload]);
+  }, [addToast, applyPayloadToLatestRefs, cellKey, contextMenu, currentMonth, currentYear, editingCell, rowCount, selectedCell, shockwaveSettings, treatmentMergeOptions, updateOpenContextMenuSnapshotFromPayload]);
 
   const moveSelectedCellsByRow = useCallback((rowDelta) => {
     const selectedCellKey = selectedCell ? cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c) : null;

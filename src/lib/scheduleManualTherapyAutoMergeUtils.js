@@ -1,12 +1,18 @@
 import { buildManualTherapyMergePayload, getManualTherapyRowSpan } from './manualTherapyMergeUtils.js';
 import { get4060PrescriptionFromContent } from './schedulerContentFormat.js';
 
-export function resolveManualTherapyAutoPrescription({ content = '', prescription = '' } = {}) {
+export function resolveManualTherapyAutoPrescription({
+  content = '',
+  prescription = '',
+  intervalMinutes,
+  durationMinutesByPrescription = {},
+} = {}) {
+  const rowSpanOptions = { intervalMinutes, durationMinutesByPrescription };
   const explicitPrescription = String(prescription || '').trim();
-  if (getManualTherapyRowSpan(explicitPrescription) > 1) return explicitPrescription;
+  if (getManualTherapyRowSpan(explicitPrescription, rowSpanOptions) > 1) return explicitPrescription;
 
   const contentPrescription = get4060PrescriptionFromContent(content);
-  if (getManualTherapyRowSpan(contentPrescription) > 1) return contentPrescription;
+  if (getManualTherapyRowSpan(contentPrescription, rowSpanOptions) > 1) return contentPrescription;
 
   return '';
 }
@@ -14,13 +20,20 @@ export function resolveManualTherapyAutoPrescription({ content = '', prescriptio
 export function buildManualTherapyAutoMergePayload({
   content = '',
   prescription = '',
+  intervalMinutes,
+  durationMinutesByPrescription = {},
   ...rest
 }) {
-  const resolvedPrescription = resolveManualTherapyAutoPrescription({ content, prescription });
+  const resolvedPrescription = resolveManualTherapyAutoPrescription({
+    content,
+    prescription,
+    intervalMinutes,
+    durationMinutesByPrescription,
+  });
   if (!resolvedPrescription) {
     return {
       ok: false,
-      reason: 'not-manual-therapy',
+      reason: 'not-treatment-duration',
       payload: [],
       affectedKeys: [],
       resolvedPrescription: '',
@@ -31,6 +44,8 @@ export function buildManualTherapyAutoMergePayload({
     ...rest,
     content,
     prescription: resolvedPrescription,
+    intervalMinutes,
+    durationMinutesByPrescription,
   });
 
   return {

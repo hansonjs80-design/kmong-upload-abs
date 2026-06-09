@@ -32,6 +32,7 @@ export default function useScheduleClipboardActions({
   clearImmediateCellDisplay,
   addToast,
   setContextMenu,
+  treatmentMergeOptions = {},
 }) {
   const buildMemoSnapshot = useCallback((w, d, r, c) => {
     const key = cellKey(w, d, r, c);
@@ -522,6 +523,7 @@ export default function useScheduleClipboardActions({
         prescription: item.prescription || '',
         bodyPart: item.body_part || null,
         mergeSpan: item.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+        ...treatmentMergeOptions,
       });
 
       if (manualTherapyMerge.ok && manualTherapyMerge.payload?.length > 0) {
@@ -707,6 +709,7 @@ export default function useScheduleClipboardActions({
     clearImmediateCellDisplay,
     setClipboardSource,
     setContextMenu,
+    treatmentMergeOptions,
   ]);
 
   return {

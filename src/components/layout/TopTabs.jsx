@@ -3,13 +3,16 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MonthPicker from '../common/MonthPicker';
 import PrintButton from '../common/PrintButton';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSchedule } from '../../contexts/ScheduleContext';
 import { getAllowedTabs } from '../../lib/authPermissions';
 
 export default function TopTabs() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const items = useMemo(() => getAllowedTabs(user), [user]);
+  const { shockwaveSettings } = useSchedule();
+  const tabLabels = shockwaveSettings?.monthly_settlement_settings?.tab_labels || {};
+  const items = useMemo(() => getAllowedTabs(user, tabLabels), [user, tabLabels]);
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
   const [isMobileTabsHidden, setIsMobileTabsHidden] = useState(false);

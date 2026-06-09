@@ -1,15 +1,7 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 
 const ThemeContext = createContext();
 const THEME_STORAGE_KEY = 'clinic-theme';
-
-const readStoredTheme = () => {
-  try {
-    return localStorage.getItem(THEME_STORAGE_KEY) || 'light';
-  } catch {
-    return 'light';
-  }
-};
 
 const persistTheme = (theme) => {
   try {
@@ -20,19 +12,15 @@ const persistTheme = (theme) => {
 };
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(readStoredTheme);
-
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    persistTheme(theme);
+    document.documentElement.setAttribute('data-theme', 'light');
+    persistTheme('light');
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = theme === 'dark' ? '#0f172a' : '#6366f1';
-  }, [theme]);
-
-  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
+    if (meta) meta.content = '#6366f1';
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: 'light', toggleTheme: () => {} }}>
       {children}
     </ThemeContext.Provider>
   );

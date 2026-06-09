@@ -12,6 +12,32 @@ export const APP_TABS = [
   { key: 'settings', path: '/settings', icon: Settings, label: '설정', shortLabel: '설정', tabClass: 'top-tab--settings' },
 ];
 
+export const DEFAULT_TAB_LABELS = APP_TABS.reduce((acc, tab) => {
+  acc[tab.key] = tab.label;
+  return acc;
+}, {});
+
+export function normalizeTabLabels(tabLabels) {
+  if (!tabLabels || typeof tabLabels !== 'object') return {};
+  return APP_TABS.reduce((acc, tab) => {
+    const label = String(tabLabels[tab.key] || '').trim();
+    if (label) acc[tab.key] = label;
+    return acc;
+  }, {});
+}
+
+export function applyTabLabels(tab, tabLabels) {
+  const labels = normalizeTabLabels(tabLabels);
+  const label = labels[tab.key];
+  if (!label) return tab;
+  return {
+    ...tab,
+    label,
+    shortLabel: label,
+    monthLabel: tab.monthLabel ? label : tab.monthLabel,
+  };
+}
+
 export const DEFAULT_USER_PERMISSIONS = APP_TABS.reduce((acc, tab) => {
   acc[tab.key] = true;
   return acc;
@@ -35,13 +61,15 @@ export function normalizePermissions(permissions, user) {
   }, {});
 }
 
-export function getAllowedTabs(user) {
+export function getAllowedTabs(user, tabLabels = {}) {
   const permissions = normalizePermissions(user?.app_permissions, user);
   const isAdmin = isAdminUser(user);
-  return APP_TABS.filter((tab) => {
-    if (tab.key === 'settings') return isAdmin;
-    return permissions[tab.key];
-  });
+  return APP_TABS
+    .filter((tab) => {
+      if (tab.key === 'settings') return isAdmin;
+      return permissions[tab.key];
+    })
+    .map((tab) => applyTabLabels(tab, tabLabels));
 }
 
 export function canAccessTab(user, tabKey) {

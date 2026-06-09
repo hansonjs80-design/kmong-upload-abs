@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { setMonthlySettlementSettings } from '../../lib/settlementSettings';
 import { extractDoseTagFromPrescription } from '../../lib/schedulerContentFormat';
+import { getTreatmentDurationMinutes } from '../../lib/manualTherapyMergeUtils';
 
 export default function SettlementSettingsPanel({
   type = 'shockwave',
@@ -19,6 +20,7 @@ export default function SettlementSettingsPanel({
     incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
     dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
     shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
+    duration_minutes: effectiveSettings?.duration_minutes || {},
   }));
 
   const title = isManualTherapy ? '도수치료 결산 설정' : '충격파 결산 설정';
@@ -37,6 +39,7 @@ export default function SettlementSettingsPanel({
       incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
       dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
       shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
+      duration_minutes: effectiveSettings?.duration_minutes || {},
     });
   }, [effectiveSettings, settings?.prescription_colors, settings?.manual_therapy_dose_tags, settings?.shortcuts, settings?.manual_therapy_shortcuts, isManualTherapy]);
 
@@ -44,6 +47,12 @@ export default function SettlementSettingsPanel({
   const getDoseTag = (prescription) => {
     if (draft.dose_tags[prescription] !== undefined) return draft.dose_tags[prescription];
     return extractDoseTagFromPrescription(prescription);
+  };
+
+  const getDurationMinutes = (prescription) => {
+    const configured = draft.duration_minutes?.[prescription];
+    if (configured !== undefined && configured !== null && configured !== '') return configured;
+    return getTreatmentDurationMinutes(prescription);
   };
 
   const updatePrescription = (index, value) => {
@@ -70,6 +79,11 @@ export default function SettlementSettingsPanel({
           nextShortcuts[nextValue] = nextShortcuts[previousName];
           delete nextShortcuts[previousName];
         }
+        const nextDurationMinutes = { ...(prev.duration_minutes || {}) };
+        if (nextDurationMinutes[previousName] !== undefined) {
+          nextDurationMinutes[nextValue] = nextDurationMinutes[previousName];
+          delete nextDurationMinutes[previousName];
+        }
         return {
           ...prev,
           prescriptions: nextPrescriptions,
@@ -77,6 +91,7 @@ export default function SettlementSettingsPanel({
           prescription_colors: nextColors,
           dose_tags: nextDoseTags,
           shortcuts: nextShortcuts,
+          duration_minutes: nextDurationMinutes,
         };
       }
       return { ...prev, prescriptions: nextPrescriptions, prescription_prices: nextPrices };
@@ -90,10 +105,12 @@ export default function SettlementSettingsPanel({
       const nextColors = { ...(prev.prescription_colors || {}) };
       const nextDoseTags = { ...prev.dose_tags };
       const nextShortcuts = { ...prev.shortcuts };
+      const nextDurationMinutes = { ...(prev.duration_minutes || {}) };
       delete nextPrices[target];
       delete nextColors[target];
       delete nextDoseTags[target];
       delete nextShortcuts[target];
+      delete nextDurationMinutes[target];
       return {
         ...prev,
         prescriptions: prev.prescriptions.filter((_, itemIndex) => itemIndex !== index),
@@ -101,6 +118,7 @@ export default function SettlementSettingsPanel({
         prescription_colors: nextColors,
         dose_tags: nextDoseTags,
         shortcuts: nextShortcuts,
+        duration_minutes: nextDurationMinutes,
       };
     });
   };
@@ -120,6 +138,10 @@ export default function SettlementSettingsPanel({
         prescription_colors: {
           ...(prev.prescription_colors || {}),
           [nextValue]: prev.prescription_colors?.[nextValue] || '#000000',
+        },
+        duration_minutes: {
+          ...(prev.duration_minutes || {}),
+          [nextValue]: prev.duration_minutes?.[nextValue] || getTreatmentDurationMinutes(nextValue) || 0,
         },
       };
     });
@@ -152,6 +174,16 @@ export default function SettlementSettingsPanel({
         cleanedShortcuts[prescription] = customShortcut;
       }
     });
+    const cleanedDurationMinutes = {};
+    cleanedPrescriptions.forEach((prescription) => {
+      const value = Number(draft.duration_minutes?.[prescription]);
+      if (Number.isFinite(value) && value > 0) {
+        cleanedDurationMinutes[prescription] = value;
+        return;
+      }
+      const inferred = getTreatmentDurationMinutes(prescription);
+      if (inferred > 0) cleanedDurationMinutes[prescription] = inferred;
+    });
 
     const cleaned = {
       prescriptions: cleanedPrescriptions,
@@ -159,6 +191,7 @@ export default function SettlementSettingsPanel({
       prescription_colors: cleanedColors,
       incentive_percentage: Number(draft.incentive_percentage) || 0,
       shortcuts: cleanedShortcuts,
+      duration_minutes: cleanedDurationMinutes,
       ...(isManualTherapy ? { dose_tags: cleanedDoseTags } : {}),
     };
     const monthly_settlement_settings = setMonthlySettlementSettings(settings, year, month, type, cleaned);
@@ -180,10 +213,12 @@ export default function SettlementSettingsPanel({
       nextSettings.manual_therapy_incentive_percentage = cleaned.incentive_percentage;
       nextSettings.manual_therapy_dose_tags = { ...cleanedDoseTags };
       nextSettings.manual_therapy_shortcuts = { ...cleanedShortcuts };
+      nextSettings.manual_therapy_duration_minutes = { ...cleanedDurationMinutes };
     } else {
       nextSettings.prescriptions = cleaned.prescriptions;
       nextSettings.incentive_percentage = cleaned.incentive_percentage;
       nextSettings.shortcuts = { ...cleanedShortcuts };
+      nextSettings.duration_minutes = { ...cleanedDurationMinutes };
     }
 
     await onSave(nextSettings);
@@ -208,6 +243,7 @@ export default function SettlementSettingsPanel({
               <div className="settlement-settings-row settlement-settings-header-row manual-therapy-row">
                 <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
                 <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>셀 태그</span>
+                <span className="settlement-label" style={{ width: 76, textAlign: 'center' }}>치료시간</span>
                 <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
                 <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
                 <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
@@ -217,6 +253,7 @@ export default function SettlementSettingsPanel({
             ) : (
               <div className="settlement-settings-row settlement-settings-header-row shockwave-row">
                 <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
+                <span className="settlement-label" style={{ width: 76, textAlign: 'center' }}>치료시간</span>
                 <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
                 <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
                 <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
@@ -226,6 +263,7 @@ export default function SettlementSettingsPanel({
             )}
             {draft.prescriptions.map((prescription, index) => {
               const doseTag = getDoseTag(prescription);
+              const durationMinutes = getDurationMinutes(prescription);
               return (
                 <div key={`${prescription}-${index}`} className={`settlement-settings-row ${isManualTherapy ? 'manual-therapy-row' : 'shockwave-row'}`}>
                   <input
@@ -255,6 +293,28 @@ export default function SettlementSettingsPanel({
                       )}
                     </div>
                   )}
+                  <div className="settlement-duration-group">
+                    <input
+                      type="number"
+                      className="form-input settlement-duration-input"
+                      min={0}
+                      step={5}
+                      value={durationMinutes || ''}
+                      placeholder="분"
+                      title="스케줄 시간 간격에 맞춰 자동 병합할 치료 시간"
+                      onChange={(event) => {
+                        const val = Number(event.target.value);
+                        setDraft((prev) => ({
+                          ...prev,
+                          duration_minutes: {
+                            ...(prev.duration_minutes || {}),
+                            [prescription]: Number.isFinite(val) && val > 0 ? val : '',
+                          },
+                        }));
+                      }}
+                    />
+                    <span className="settlement-duration-unit">분</span>
+                  </div>
                   <div className="settlement-shortcut-group">
                     <span className="settlement-shortcut-prefix">Cmd+</span>
                     <input

@@ -6,8 +6,9 @@ import { getTodayKST, isSameDate } from '../../lib/calendarUtils';
 import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
-import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
+import { buildManualTherapyUnmergePayload, getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
+import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import { useToast } from '../common/Toast';
@@ -971,6 +972,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     settings,
   });
 
+  const shockwaveMergeSettings = useMemo(() => (
+    getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave')
+  ), [settings, currentYear, currentMonth]);
+
+  const manualTherapyMergeSettings = useMemo(() => (
+    getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy')
+  ), [settings, currentYear, currentMonth]);
+
+  const treatmentDurationMinutesByPrescription = useMemo(() => ({
+    ...(shockwaveMergeSettings?.duration_minutes || {}),
+    ...(manualTherapyMergeSettings?.duration_minutes || {}),
+  }), [shockwaveMergeSettings?.duration_minutes, manualTherapyMergeSettings?.duration_minutes]);
+
+  const treatmentMergeOptions = useMemo(() => ({
+    intervalMinutes: settings?.interval_minutes,
+    durationMinutesByPrescription: treatmentDurationMinutesByPrescription,
+  }), [settings?.interval_minutes, treatmentDurationMinutesByPrescription]);
 
   const { buildSchedulerAutoText } = useSchedulerAutoText({
     memos,
@@ -1009,7 +1027,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       if (!autoPres) return;
       const existingPrescription = String(memo?.prescription || '').trim();
       const mergeSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
-      const expectedRowSpan = getManualTherapyRowSpan(autoPres);
+      const expectedRowSpan = getManualTherapyRowSpan(autoPres, treatmentMergeOptions);
       const hasExpectedMerge = (
         expectedRowSpan > 1 &&
         !mergeSpan.mergedInto &&
@@ -1048,6 +1066,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           prescription,
           bodyPart: memos[key]?.body_part || null,
           mergeSpan: memos[key]?.merge_span,
+          ...treatmentMergeOptions,
         });
         const updates = manualTherapyMerge.ok ? manualTherapyMerge.payload : [{
           year: currentYear,
@@ -1072,7 +1091,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         await onLoadMemos(currentYear, currentMonth);
       }
     })();
-  }, [loadedMemosKey, currentYear, currentMonth, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos]);
+  }, [loadedMemosKey, currentYear, currentMonth, memos, baseTimeSlots.length, saveShockwaveMemosBulk, onLoadMemos, treatmentMergeOptions]);
 
   const isEditableTarget = useCallback((target) => {
     return (
@@ -1376,6 +1395,40 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       setPendingDisplayValues((prev) => ({ ...prev, [key]: newContent }));
     }
 
+    if (!newContent.trim()) {
+      const unmergePayload = buildManualTherapyUnmergePayload({
+        key,
+        memos: effectiveMemos,
+        pendingMergeSpans,
+        currentYear,
+        currentMonth,
+        content: '',
+        bgColor: null,
+        prescription: '',
+        bodyPart: null,
+      });
+
+      if (unmergePayload.ok) {
+        setPendingDisplayValues((prev) => ({ ...prev, [key]: '' }));
+        removePendingScheduleDraft(currentYear, currentMonth, key);
+        applyImmediateCellDisplay(unmergePayload.payload);
+        applyImmediateMergeSpan(unmergePayload.payload);
+        recordUndo({
+          type: 'bulk-edit',
+          oldMemos: buildMemoSnapshotForKeys(unmergePayload.affectedKeys),
+        });
+        const success = await queuedSaveShockwaveMemosBulk(unmergePayload.payload);
+        if (success) {
+          removePendingScheduleDraftIfValue(currentYear, currentMonth, key, '');
+          clearImmediateCellDisplay(unmergePayload.payload);
+        } else {
+          rememberPendingScheduleDraft(currentYear, currentMonth, key, '');
+          addToast('저장 실패', 'error');
+        }
+        return;
+      }
+    }
+
     const manualTherapyMerge = buildManualTherapyAutoMergePayload({
       key,
       memos: effectiveMemos,
@@ -1388,6 +1441,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       prescription: newPrescription ?? (memos[key]?.prescription || ''),
       bodyPart: hasBodyPartResult ? newBodyPart : (memos[key]?.body_part || null),
       mergeSpan: newMergeSpan || memos[key]?.merge_span,
+      ...treatmentMergeOptions,
     });
 
     const shouldWritePrescription = hasPrescriptionResult || (newPrescription !== undefined && newPrescription !== null);
@@ -1446,14 +1500,26 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       oldPrescription: memos[key]?.prescription || null,
       oldBodyPart: memos[key]?.body_part || null,
     });
-    const success = await queuedOnSaveMemo(currentYear, currentMonth, w, d, r, c, newContent, undefined, newMergeSpan, newPrescription, newBodyPart);
+    const success = await queuedOnSaveMemo(
+      currentYear,
+      currentMonth,
+      w,
+      d,
+      r,
+      c,
+      newContent,
+      undefined,
+      newContent.trim() ? newMergeSpan : { rowSpan: 1, colSpan: 1, mergedInto: null },
+      newContent.trim() ? newPrescription : '',
+      newContent.trim() ? newBodyPart : null
+    );
     if (success) removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
     else rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
     // pendingDisplayValues는 즉시 삭제하지 않음.
     // memos 컨텍스트가 새 값을 반영할 때까지 유지하여 깜빡임 방지.
     // 아래 useEffect(cleanupStalePendingValues)에서 memos 업데이트 후 자동 정리.
     if (!success) addToast('저장 실패', 'error');
-  }, [editValue, currentYear, currentMonth, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues]);
+  }, [editValue, currentYear, currentMonth, memos, effectiveMemos, pendingMergeSpans, baseTimeSlots.length, queuedOnSaveMemo, addToast, buildSchedulerAutoText, recordUndo, buildMemoSnapshotForKeys, queuedSaveShockwaveMemosBulk, applyImmediateCellDisplay, applyImmediateMergeSpan, clearImmediateCellDisplay, cellKey, setPendingDisplayValues, treatmentMergeOptions]);
 
   handleCellSaveRef.current = handleCellSave;
 
@@ -1504,6 +1570,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     clearImmediateCellDisplay,
     addToast,
     setContextMenu,
+    treatmentMergeOptions,
   });
 
   const selectionInfo = computeSelectionInfo();
@@ -1643,6 +1710,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     clearImmediateCellDisplay,
     setPatientHistoryModalOpen,
     setPatientHistoryModalData,
+    treatmentMergeOptions,
   });
 
   const closePatientHistoryModal = useCallback(() => {
@@ -1716,6 +1784,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
+    treatmentMergeOptions,
   });
 
   const stepContextMenuVisitInput = useCallback((delta) => {
@@ -1863,6 +1932,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu,
     getDefaultReservationTime,
     handleOpenBodyPartMenu,
+    treatmentMergeOptions,
   });
 
   useScheduleGlobalEvents({

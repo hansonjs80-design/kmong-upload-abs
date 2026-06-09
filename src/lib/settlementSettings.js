@@ -10,6 +10,7 @@ export const DEFAULT_SHOCKWAVE_SETTLEMENT = {
     'F/Rdc': '2',
     'F1.5': '3',
   },
+  duration_minutes: {},
   incentive_percentage: 7,
 };
 
@@ -22,6 +23,10 @@ export const DEFAULT_MANUAL_THERAPY_SETTLEMENT = {
   shortcuts: {
     '40분': '4',
     '60분': '6',
+  },
+  duration_minutes: {
+    '40분': 40,
+    '60분': 60,
   },
   incentive_percentage: 0,
 };
@@ -44,6 +49,9 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
   const rawShortcuts = isManual
     ? settings?.manual_therapy_shortcuts
     : settings?.shortcuts;
+  const rawDurationMinutes = isManual
+    ? settings?.manual_therapy_duration_minutes
+    : settings?.duration_minutes;
 
   return {
     prescriptions: Array.isArray(prescriptions) && prescriptions.length > 0
@@ -57,6 +65,10 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
     shortcuts: {
       ...fallback.shortcuts,
       ...(rawShortcuts || {}),
+    },
+    duration_minutes: {
+      ...fallback.duration_minutes,
+      ...(rawDurationMinutes || {}),
     },
     incentive_percentage: isManual
       ? settings?.manual_therapy_incentive_percentage ?? fallback.incentive_percentage
@@ -96,6 +108,10 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
       ...base.shortcuts,
       ...(override?.shortcuts || {}),
     },
+    duration_minutes: {
+      ...base.duration_minutes,
+      ...(override?.duration_minutes || {}),
+    },
     dose_tags: override?.dose_tags || {},
     incentive_percentage: override?.incentive_overridden === true || Number(override?.incentive_percentage) > 0
       ? Number(override?.incentive_percentage) || 0
@@ -120,6 +136,7 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
         prescription_prices: nextConfig?.prescription_prices || {},
         prescription_colors: nextConfig?.prescription_colors || {},
         shortcuts: nextConfig?.shortcuts || {},
+        duration_minutes: nextConfig?.duration_minutes || {},
         ...(nextConfig?.dose_tags ? { dose_tags: nextConfig.dose_tags } : {}),
         incentive_percentage: Number(nextConfig?.incentive_percentage) || 0,
         incentive_overridden: true,

@@ -1,18 +1,18 @@
 import { useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import MonthPicker from '../common/MonthPicker';
-import ThemeToggle from '../common/ThemeToggle';
+import { useSchedule } from '../../contexts/ScheduleContext';
+import { APP_TABS, applyTabLabels } from '../../lib/authPermissions';
 
 export default function Header({ onMenuToggle }) {
   const location = useLocation();
-  
-  const pageLabels = {
-    '/': '직원 근무표',
-    '/shockwave': '충격파/도수 스케줄',
-    '/shockwave-stats': '충격파 통계',
-    '/manual-therapy-stats': '도수치료 통계',
-    '/settings': '설정 / 관리',
-  };
+  const { shockwaveSettings } = useSchedule();
+  const tabLabels = shockwaveSettings?.monthly_settlement_settings?.tab_labels || {};
+  const pageLabels = APP_TABS.reduce((acc, tab) => {
+    const labeledTab = applyTabLabels(tab, tabLabels);
+    acc[tab.path] = tab.key === 'settings' ? `${labeledTab.label} / 관리` : labeledTab.label;
+    return acc;
+  }, {});
 
   const pageLabel = pageLabels[location.pathname] || '';
 
@@ -28,9 +28,6 @@ export default function Header({ onMenuToggle }) {
         {(location.pathname === '/shockwave-stats' || location.pathname === '/manual-therapy-stats' || location.pathname === '/settings') && (
           <div className="header-title" style={{ fontSize: '1.2rem' }}>{pageLabel}</div>
         )}
-      </div>
-      <div className="header-right">
-        <ThemeToggle />
       </div>
     </header>
   );

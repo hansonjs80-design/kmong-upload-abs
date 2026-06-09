@@ -47,6 +47,7 @@ export default function useScheduleContextMenuActions({
   applyImmediateCellDisplay,
   applyImmediateMergeSpan,
   clearImmediateCellDisplay,
+  treatmentMergeOptions = {},
 }) {
   const saveDebounceRef = useRef({ timer: null, pending: new Map(), undoMemos: null });
 
@@ -214,6 +215,7 @@ export default function useScheduleContextMenuActions({
             prescription: action.value,
             bodyPart: memo.body_part || null,
             mergeSpan: memo.merge_span,
+            ...treatmentMergeOptions,
           });
 
           if (manualTherapyMerge.ok) {
@@ -237,7 +239,7 @@ export default function useScheduleContextMenuActions({
             manualTherapyMerge.affectedKeys.forEach((itemKey) => affectedKeys.add(itemKey));
             anyChanged = true;
           } else {
-            if (manualTherapyMerge.reason === 'not-manual-therapy') {
+            if (manualTherapyMerge.reason === 'not-manual-therapy' || manualTherapyMerge.reason === 'not-treatment-duration') {
               const unmergePayload = buildManualTherapyUnmergePayload({
                 key,
                 memos,
@@ -779,5 +781,6 @@ export default function useScheduleContextMenuActions({
     applyImmediateCellDisplay,
     applyImmediateMergeSpan,
     clearImmediateCellDisplay,
+    treatmentMergeOptions,
   ]);
 }

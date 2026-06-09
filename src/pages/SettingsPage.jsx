@@ -11,15 +11,18 @@ export default function SettingsPage() {
   const [settingsSection, setSettingsSection] = useState('general');
   
   return (
-    <div className="animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title">설정</h1>
+    <div className="settings-page animate-fade-in">
+      <div className="settings-page-header">
+        <div>
+          <h1 className="settings-page-title">설정</h1>
+          <p className="settings-page-subtitle">앱 표시, 스케줄 기본값, 계정 정보를 관리합니다.</p>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="settings-section-tabs">
         <button
           type="button"
-          className={`btn btn-sm ${settingsSection === 'general' ? 'btn-primary' : 'btn-secondary'}`}
+          className={`settings-section-tab ${settingsSection === 'general' ? 'active' : ''}`}
           onClick={() => setSettingsSection('general')}
         >
           환경 설정
@@ -27,7 +30,7 @@ export default function SettingsPage() {
         {canManageLogin && (
           <button
             type="button"
-            className={`btn btn-sm ${settingsSection === 'login' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`settings-section-tab ${settingsSection === 'login' ? 'active' : ''}`}
             onClick={() => setSettingsSection('login')}
           >
             로그인 관리
@@ -40,7 +43,7 @@ export default function SettingsPage() {
           <GeneralSettings />
           
           {/* 계정 */}
-          <div className="card">
+          <div className="settings-card">
             <div className="card-header">
               <span className="card-title"><Shield size={18} /> 계정</span>
             </div>
