@@ -80,18 +80,49 @@ export default function useScheduleClipboardActions({
         const colIndex = range.minCol + colOffset;
         const key = cellKey(range.w, range.d, rowIndex, colIndex);
         const memo = memos[key];
+
+        let cellContent = memo?.content || '';
+        const mergeSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+
+        // 병합 마스터 셀인데 회차 정보가 마스터 셀에 없다면 자식 셀에서 추출하여 결합
+        if (mergeSpan.rowSpan > 1 && !mergeSpan.mergedInto) {
+          const hasVisit = getExplicitVisitSuffix(cellContent) || getNonVisitParentheticalSuffix(cellContent);
+          if (!hasVisit) {
+            for (let rOffset = 1; rOffset < mergeSpan.rowSpan; rOffset++) {
+              const childKey = cellKey(range.w, range.d, rowIndex + rOffset, colIndex);
+              const childMemo = memos[childKey];
+              const childContent = String(childMemo?.content || '').trim();
+              if (childContent) {
+                const childVisit = getExplicitVisitSuffix(childContent) || getNonVisitParentheticalSuffix(childContent);
+                if (childVisit) {
+                  cellContent = `${cellContent}${childVisit}`;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
         cellRow.push({
           sourceKey: key,
           rowOffset,
           colOffset,
-          content: memo?.content || '',
+          content: cellContent,
           bg_color: memo?.bg_color || null,
-          merge_span: memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
+          merge_span: mergeSpan,
           prescription: memo?.prescription || '',
           body_part: memo?.body_part || '',
         });
-        plainRow.push(memo?.content || '');
+        plainRow.push(cellContent);
         sourceKeys.push(key);
+
+        // 병합 마스터 셀의 경우 자식 셀의 키도 sourceKeys에 추가하여 잘라내기 시 깨끗이 삭제되도록 처리
+        if (mergeSpan.rowSpan > 1 && !mergeSpan.mergedInto) {
+          for (let rOffset = 1; rOffset < mergeSpan.rowSpan; rOffset++) {
+            const childKey = cellKey(range.w, range.d, rowIndex + rOffset, colIndex);
+            sourceKeys.push(childKey);
+          }
+        }
       }
       cells.push(cellRow);
       plainRows.push(plainRow.join('\t'));
