@@ -353,6 +353,16 @@ export default function useSchedulerAutoText({
       const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
 
       if (inputHas4060 && !has4060Pattern(selected.nextText)) {
+        // 부위가 비어있어도 처방에 따른 rowSpan 자동 확장
+        if (initialPrescription) {
+          const targetRowSpan = getManualTherapyRowSpan(initialPrescription, {
+            intervalMinutes: settings?.interval_minutes,
+            durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+          });
+          if (targetRowSpan > 1) {
+            finalMergeSpan.rowSpan = targetRowSpan;
+          }
+        }
         return {
           text: rawName,
           prescription: initialPrescription || undefined,
@@ -366,6 +376,17 @@ export default function useSchedulerAutoText({
         : (has4060Pattern(selected.nextText)
           ? undefined
           : (searchChart ? (selected.prescription || '') : (selected.prescription || undefined)));
+
+      // 부위가 비어있어도 처방에 따른 rowSpan 자동 확장
+      if (autoPrescription) {
+        const targetRowSpan = getManualTherapyRowSpan(autoPrescription, {
+          intervalMinutes: settings?.interval_minutes,
+          durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+        });
+        if (targetRowSpan > 1) {
+          finalMergeSpan.rowSpan = targetRowSpan;
+        }
+      }
 
       return {
         text: (explicitVisitSuffix || explicitNoteSuffix) ? rawName : selected.nextText,
