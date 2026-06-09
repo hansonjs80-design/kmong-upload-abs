@@ -484,9 +484,55 @@ const MemoizedCell = memo(({
     if (Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > 10) {
       clearLongPressTimer();
     }
-  }, [clearLongPressTimer]);
+
+    tooltipMousePosRef.current = { x: touch.clientX, y: touch.clientY };
+
+    const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cellElement = targetElement?.closest('.sw-cell');
+    
+    if (cellElement) {
+      const cellKeyStr = cellElement.getAttribute('data-cell-key') || cellElement.id.replace('cell-', '');
+      if (cellKeyStr && cellKeyStr !== lastTouchDragCellRef.current) {
+        lastTouchDragCellRef.current = cellKeyStr;
+        
+        const [w, d, r, c] = cellKeyStr.split('-').map(Number);
+        if (!isNaN(w) && !isNaN(d) && !isNaN(r) && !isNaN(c)) {
+          const dayInfo = weeks[w][d];
+          const slotInfo = getTimeSlotsForDay(dayInfo)[r];
+          const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
+          const therapistName = getTherapistNameForDate(c, dayInfo.day) || '';
+          const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
+          
+          setHoverCell({ weekIdx: w, dayIdx: d, rowIdx: r, colIdx: c, staffBlockRule, slotInfo, isMergedView: false });
+          selectSingleCell({ w, d, r, c });
+        }
+      }
+      
+      // Update tooltip position smoothly during drag
+      if (tooltipRef.current) {
+        const tooltipEl = tooltipRef.current;
+        const offset = 14;
+        const edgePadding = 8;
+        const { width, height } = tooltipEl.getBoundingClientRect();
+        let left = touch.clientX + offset;
+        let top = touch.clientY + offset;
+        
+        if (left + width + edgePadding > window.innerWidth) left = touch.clientX - width - offset;
+        if (top + height + edgePadding > window.innerHeight) top = touch.clientY - height - offset;
+        if (top < edgePadding) top = edgePadding;
+        
+        left = Math.min(Math.max(edgePadding, left), Math.max(edgePadding, window.innerWidth - width - edgePadding));
+        top = Math.min(Math.max(edgePadding, top), Math.max(edgePadding, window.innerHeight - height - edgePadding));
+        
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.style.top = `${top}px`;
+      }
+    }
+  }, [clearLongPressTimer, weeks, getTimeSlotsForDay, getTherapistNameForDate, getStaffScheduleBlockForCell, setHoverCell, selectSingleCell]);
 
   const handleCellTouchEnd = useCallback((event) => {
+    lastTouchPosRef.current.active = false;
+    lastTouchDragCellRef.current = null;
     clearLongPressTimer();
     if (longPressTriggeredRef.current) {
       event.preventDefault();
@@ -899,6 +945,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const patientHistorySearchInputRef = useRef(null);
   const imeOpenRef = useRef(false);
   const skipNextEditBlurSaveRef = useRef(false);
+  const lastTouchDragCellRef = useRef(null);
+  const lastTouchPosRef = useRef({ active: false, x: 0, y: 0 });
   const handleCellSaveRef = useRef(null);
   const editDraftRef = useRef(null);
   const editAutosaveTimerRef = useRef(null);
