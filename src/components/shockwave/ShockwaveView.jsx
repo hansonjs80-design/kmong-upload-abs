@@ -7,7 +7,7 @@ import { normalizeNameForMatch } from '../../lib/memoParser';
 import { buildBlankScheduleCleanupPayload, sanitizeBlankScheduleCellData } from '../../lib/scheduleBlankCellCleanupUtils';
 import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleStatusUtils';
 import { buildManualTherapyUnmergePayload, getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
-import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
+import { buildManualTherapyAutoMergePayload, resolveManualTherapyAutoPrescription } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
 import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
@@ -1076,7 +1076,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     Object.entries(memos).forEach(([key, memo]) => {
       const content = String(memo?.content || '').trim();
       if (!content) return;
-      const autoPres = get4060PrescriptionFromContent(content);
+      // content의 40/60 패턴뿐 아니라 memo.prescription 필드도 함께 확인하여
+      // 부위 없이 처방만 설정된 셀(예: 기성용* + 처방 20분)도 자동 병합 대상에 포함
+      const autoPres = resolveManualTherapyAutoPrescription({
+        content,
+        prescription: memo?.prescription || '',
+        ...treatmentMergeOptions,
+      });
       if (!autoPres) return;
       const existingPrescription = String(memo?.prescription || '').trim();
       const mergeSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
