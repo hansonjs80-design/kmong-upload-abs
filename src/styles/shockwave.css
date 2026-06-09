@@ -434,7 +434,7 @@
 
 @media (max-width: 768px) {
   .shockwave-week-floating-actions--left {
-    display: none;
+    left: 4px; /* 모바일에서는 왼쪽에 밀착하여 표시 */
   }
 
   .sw-col-resize-handle,
