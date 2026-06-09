@@ -1011,7 +1011,7 @@
   }
   .shockwave-day:last-child { border-right: none; }
   
-  .sw-cell { font-size: var(--sw-cell-font-size); min-height: 20px; }
+  .sw-cell { font-size: var(--sw-cell-font-size); }
   .sw-day-header-cell { font-size: 0.68rem; padding: 6px 2px; }
   .sw-day-header-label--desktop { display: none; }
   .sw-day-header-label--mobile { display: inline-block; }
