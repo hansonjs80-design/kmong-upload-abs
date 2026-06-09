@@ -216,6 +216,18 @@ export function incrementSessionCount(text) {
     return `${prefix}${suffixDose}(2)`;
   }
 
+  // 3) 단독 회차 접미사 괄호 형태인 경우: (3) -> (4)
+  const singleParenMatch = s.match(/^(\(\d+\))$/);
+  if (singleParenMatch) {
+    const count = parseInt(singleParenMatch[1].replace(/[()]/g, ''), 10);
+    return `(${count + 1})`;
+  }
+
+  // 4) 단독 회차 접미사 별표 형태인 경우: * -> (2)
+  if (s === '*' || s === '**') {
+    return '(2)';
+  }
+
   // 매칭 안 되면 그대로 반환
   return s;
 }

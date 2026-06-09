@@ -57,17 +57,45 @@ export default function useScheduleClipboardActions({
   const buildClipboardSelection = useCallback(() => {
     if (!selectedCell) return null;
 
-    const range = selectionInfo || {
-      w: selectedCell.w,
-      d: selectedCell.d,
-      minRow: selectedCell.r,
-      maxRow: selectedCell.r,
-      minCol: selectedCell.c,
-      maxCol: selectedCell.c,
-    };
+    let targetW = selectedCell.w;
+    let targetD = selectedCell.d;
+    let targetMinRow = selectedCell.r;
+    let targetMaxRow = selectedCell.r;
+    let targetMinCol = selectedCell.c;
+    let targetMaxCol = selectedCell.c;
 
-    const rowCount = range.maxRow - range.minRow + 1;
-    const colCountInRange = range.maxCol - range.minCol + 1;
+    if (selectionInfo) {
+      targetW = selectionInfo.w;
+      targetD = selectionInfo.d;
+      targetMinRow = selectionInfo.minRow;
+      targetMaxRow = selectionInfo.maxRow;
+      targetMinCol = selectionInfo.minCol;
+      targetMaxCol = selectionInfo.maxCol;
+    } else {
+      // 단일 셀 선택 시 병합 영역 전체로 자동 확장
+      const cellKeyStr = cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c);
+      const cellMemo = memos[cellKeyStr];
+      const mergeSpan = cellMemo?.merge_span;
+      
+      let masterKey = cellKeyStr;
+      if (mergeSpan?.mergedInto) {
+        masterKey = mergeSpan.mergedInto;
+      }
+      
+      const parts = masterKey.split('-').map(Number);
+      if (parts.length === 4) {
+        const [, , mr, mc] = parts;
+        const masterMemo = memos[masterKey];
+        const masterSpan = masterMemo?.merge_span || { rowSpan: 1, colSpan: 1 };
+        targetMinRow = mr;
+        targetMaxRow = mr + (masterSpan.rowSpan || 1) - 1;
+        targetMinCol = mc;
+        targetMaxCol = mc + (masterSpan.colSpan || 1) - 1;
+      }
+    }
+
+    const rowCount = targetMaxRow - targetMinRow + 1;
+    const colCountInRange = targetMaxCol - targetMinCol + 1;
     const cells = [];
     const plainRows = [];
     const sourceKeys = [];
@@ -76,53 +104,24 @@ export default function useScheduleClipboardActions({
       const cellRow = [];
       const plainRow = [];
       for (let colOffset = 0; colOffset < colCountInRange; colOffset++) {
-        const rowIndex = range.minRow + rowOffset;
-        const colIndex = range.minCol + colOffset;
-        const key = cellKey(range.w, range.d, rowIndex, colIndex);
+        const rowIndex = targetMinRow + rowOffset;
+        const colIndex = targetMinCol + colOffset;
+        const key = cellKey(targetW, targetD, rowIndex, colIndex);
         const memo = memos[key];
-
-        let cellContent = memo?.content || '';
         const mergeSpan = memo?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
-
-        // 병합 마스터 셀인데 회차 정보가 마스터 셀에 없다면 자식 셀에서 추출하여 결합
-        if (mergeSpan.rowSpan > 1 && !mergeSpan.mergedInto) {
-          const hasVisit = getExplicitVisitSuffix(cellContent) || getNonVisitParentheticalSuffix(cellContent);
-          if (!hasVisit) {
-            for (let rOffset = 1; rOffset < mergeSpan.rowSpan; rOffset++) {
-              const childKey = cellKey(range.w, range.d, rowIndex + rOffset, colIndex);
-              const childMemo = memos[childKey];
-              const childContent = String(childMemo?.content || '').trim();
-              if (childContent) {
-                const childVisit = getExplicitVisitSuffix(childContent) || getNonVisitParentheticalSuffix(childContent);
-                if (childVisit) {
-                  cellContent = `${cellContent}${childVisit}`;
-                  break;
-                }
-              }
-            }
-          }
-        }
 
         cellRow.push({
           sourceKey: key,
           rowOffset,
           colOffset,
-          content: cellContent,
+          content: memo?.content || '',
           bg_color: memo?.bg_color || null,
           merge_span: mergeSpan,
           prescription: memo?.prescription || '',
           body_part: memo?.body_part || '',
         });
-        plainRow.push(cellContent);
+        plainRow.push(memo?.content || '');
         sourceKeys.push(key);
-
-        // 병합 마스터 셀의 경우 자식 셀의 키도 sourceKeys에 추가하여 잘라내기 시 깨끗이 삭제되도록 처리
-        if (mergeSpan.rowSpan > 1 && !mergeSpan.mergedInto) {
-          for (let rOffset = 1; rOffset < mergeSpan.rowSpan; rOffset++) {
-            const childKey = cellKey(range.w, range.d, rowIndex + rOffset, colIndex);
-            sourceKeys.push(childKey);
-          }
-        }
       }
       cells.push(cellRow);
       plainRows.push(plainRow.join('\t'));
@@ -132,10 +131,10 @@ export default function useScheduleClipboardActions({
       mode: 'copy',
       srcYear: currentYear,
       srcMonth: currentMonth,
-      srcW: range.w,
-      srcD: range.d,
-      srcMinRow: range.minRow,
-      srcMinCol: range.minCol,
+      srcW: targetW,
+      srcD: targetD,
+      srcMinRow: targetMinRow,
+      srcMinCol: targetMinCol,
       rowCount,
       colCount: colCountInRange,
       cells,
@@ -510,7 +509,8 @@ export default function useScheduleClipboardActions({
     }
 
     const enhancedPayload = await Promise.all(targetPayload.map(async (item) => {
-      if (item.content && (!item.prescription || !item.body_part)) {
+      const isMergedChild = item.merge_span?.mergedInto !== null && item.merge_span?.mergedInto !== undefined;
+      if (!isMergedChild && item.content && (!item.prescription || !item.body_part)) {
         const result = await buildSchedulerAutoText(
           item.week_index,
           item.day_index,
