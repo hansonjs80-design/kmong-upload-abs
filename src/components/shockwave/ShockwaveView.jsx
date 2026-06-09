@@ -561,7 +561,7 @@ const MemoizedCell = memo(({
         {!isEditing && !isImePreview && (
           <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
             {displayData.hasDisplayText ? (
-              <span className="sw-cell-main" style={isVisitOnLowerRow ? { whiteSpace: 'normal' } : undefined}>
+              <span className="sw-cell-main" style={isVisitOnLowerRow ? { whiteSpace: 'normal' } : { whiteSpace: 'nowrap' }}>
                 <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
                 {displayData.noteSuffix ? (
                   <>
@@ -649,7 +649,7 @@ const MemoizedCell = memo(({
       >
         <div className="sw-cell-display">
           {displayData.hasDisplayText ? (
-            <span className="sw-cell-main" style={isVisitOnLowerRow ? { whiteSpace: 'normal' } : undefined}>
+            <span className="sw-cell-main" style={isVisitOnLowerRow ? { whiteSpace: 'normal' } : { whiteSpace: 'nowrap' }}>
               <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
               {displayData.noteSuffix ? (
                 <>
