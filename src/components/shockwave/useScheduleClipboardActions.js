@@ -508,33 +508,49 @@ export default function useScheduleClipboardActions({
       }
     }
 
+    const isInternalClipboard = clip.sourceKeys && clip.sourceKeys.length > 0;
+
     const enhancedPayload = await Promise.all(targetPayload.map(async (item) => {
       const isMergedChild = item.merge_span?.mergedInto !== null && item.merge_span?.mergedInto !== undefined;
       if (!isMergedChild && item.content && (!item.prescription || !item.body_part)) {
+        // 외부 클립보드에서 온 데이터인 경우, 기존 회차 접미사를 제거하고 전달하여
+        // buildSchedulerAutoText가 DB 기반으로 새 회차를 자유롭게 계산하도록 함
+        let autoTextInput = item.content;
+        if (!isInternalClipboard) {
+          const existingVisitSuffix = getExplicitVisitSuffix(item.content);
+          if (existingVisitSuffix) {
+            autoTextInput = item.content.slice(0, -existingVisitSuffix.length).trim();
+          }
+        }
+
         const result = await buildSchedulerAutoText(
           item.week_index,
           item.day_index,
           item.row_index,
           item.col_index,
-          item.content,
+          autoTextInput,
           true,
           undefined,
           true,
           preloadedData
         );
 
-        // 복사 시점에 이미 완성된 회차 접미사(예: (3) 또는 *) 추출
-        const itemVisitSuffix = getExplicitVisitSuffix(item.content);
-        const itemNoteSuffix = getNonVisitParentheticalSuffix(item.content);
-
         let finalContent = result.text || item.content;
-        if (itemVisitSuffix || itemNoteSuffix) {
-          const resultVisitSuffix = getExplicitVisitSuffix(finalContent);
-          const resultNoteSuffix = getNonVisitParentheticalSuffix(finalContent);
-          const baseText = finalContent
-            .slice(0, finalContent.length - (resultVisitSuffix?.length || 0) - (resultNoteSuffix?.length || 0))
-            .trim();
-          finalContent = `${baseText}${itemVisitSuffix || ''}${itemNoteSuffix || ''}`;
+
+        // 내부 클립보드에서 복사한 경우에만 복사 시점의 회차 접미사를 우선 적용
+        // (buildPastePayload에서 incrementSessionCount로 증량된 회차를 유지하기 위함)
+        if (isInternalClipboard) {
+          const itemVisitSuffix = getExplicitVisitSuffix(item.content);
+          const itemNoteSuffix = getNonVisitParentheticalSuffix(item.content);
+
+          if (itemVisitSuffix || itemNoteSuffix) {
+            const resultVisitSuffix = getExplicitVisitSuffix(finalContent);
+            const resultNoteSuffix = getNonVisitParentheticalSuffix(finalContent);
+            const baseText = finalContent
+              .slice(0, finalContent.length - (resultVisitSuffix?.length || 0) - (resultNoteSuffix?.length || 0))
+              .trim();
+            finalContent = `${baseText}${itemVisitSuffix || ''}${itemNoteSuffix || ''}`;
+          }
         }
 
         return {
