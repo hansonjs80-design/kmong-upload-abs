@@ -1,0 +1,1253 @@
+/* =============================================
+ * 글로벌 스타일 & CSS 변수
+ * ============================================*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Light Theme (기본) ── */
+:root {
+  --font-family: Arial, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* 기본 색상 */
+  --bg-primary: #f4f7fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e9eff6;
+  --bg-card: #ffffff;
+  --bg-hover: #f1f5f9;
+  --bg-input: #ffffff;
+  --bg-modal-overlay: rgba(15, 23, 42, 0.4);
+  
+  --hover-brightness: 0.96;
+
+  /* 텍스트 */
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --text-inverse: #ffffff;
+
+  /* 브랜드 */
+  --brand-primary: #5850ec;
+  --brand-primary-hover: #4338ca;
+  --brand-primary-light: #eef2ff;
+  --brand-secondary: #7c3aed;
+  --brand-gradient: #5850ec;
+
+  /* 보더 */
+  --border-color: #d1d5db; /* slate-300 느낌 */
+  --border-color-light: #e5e7eb; /* slate-200 느낌 */
+  --border-color-focus: #5850ec;
+
+  /* 그림자 (Soft Layered Shadows) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+  /* 달력 색상 (Refined) */
+  --cal-sunday-bg: #fecaca;
+  --cal-sunday-text: #e11d48;
+  --cal-saturday-bg: rgba(59, 130, 246, 0.22);
+  --cal-saturday-text: #2563eb;
+  --cal-header-sunday-bg: #fda4af;
+  --cal-header-saturday-bg: rgba(59, 130, 246, 0.37);
+  --cal-other-month-bg: #e8edf3;
+  --cal-other-month-text: #95a1b1;
+  --cal-today-date-bg: #6366f1;
+  --cal-today-memo-bg: #fef9c3;
+  --cal-holiday-bg: #fca5a5;
+  --cal-holiday-text: #991b1b;
+  --cal-weekday-bg: #ffffff;
+
+  /* 메모 글자색 (Sophisticated) */
+  --memo-night: #2563eb;
+  --memo-off: #7c3aed;
+  --memo-leave: #059669;
+  --memo-attend: #ea580c;
+  --memo-special: #dc2626;
+
+  /* 충격파 색상 (Refined & Semi-transparent) */
+  --sw-green: #dcfce7;
+  --sw-green-text: #166534;
+  --sw-green-other: #f0fdf4;
+  --sw-preserve: #fef9c3;
+  --sw-holiday-header: #fecaca;
+  --sw-holiday-name: #fee2e2;
+  --sw-holiday-bg: #f0fdf4;
+  --sw-today-border: #d946ef;
+  --sw-4060-color: #dc2626;
+
+  /* 상태 */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+
+  /* 반경/간격 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* 글래스모피즘 */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-blur: blur(12px);
+
+  /* 트랜지션 */
+  --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 사이드바 */
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 80px;
+  --header-height: 60px;
+  --bottom-nav-height: 64px;
+}
+
+/* ── Dark Theme ── */
+[data-theme="dark"] {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --bg-hover: #334155;
+  --bg-input: #1e293b;
+  --bg-modal-overlay: rgba(0, 0, 0, 0.6);
+  
+  --hover-brightness: 1.1;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-inverse: #0f172a;
+
+  --brand-primary: #818cf8;
+  --brand-primary-hover: #6366f1;
+  --brand-primary-light: #1e1b4b;
+
+  --border-color: #334155;
+  --border-color-light: #1e293b;
+  --border-color-focus: #818cf8;
+
+  /* 글래스모피즘 (Dark) */
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.05);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.6);
+
+  --cal-sunday-bg: #3b1a1a;
+  --cal-sunday-text: #f87171;
+  --cal-saturday-bg: rgba(96, 165, 250, 0.1);
+  --cal-saturday-text: #60a5fa;
+  --cal-header-saturday-bg: rgba(96, 165, 250, 0.25);
+  --cal-other-month-bg: #1a2332;
+  --cal-other-month-text: #7d8b9f;
+  --cal-today-date-bg: #6366f1;
+  --cal-today-memo-bg: #422006;
+  --cal-holiday-bg: #450a0a;
+  --cal-holiday-text: #f87171;
+  --cal-weekday-bg: #1e293b;
+
+  --sw-green: #064e3b;
+  --sw-green-text: #6ee7b7;
+  --sw-green-other: #064e3b;
+  --sw-preserve: #78350f;
+  --sw-holiday-header: #7f1d1d;
+  --sw-holiday-name: #991b1b;
+  --sw-holiday-bg: #064e3b;
+  --sw-4060-color: #f87171;
+}
+
+/* ── 리셋 & 기본 ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--transition-normal), color var(--transition-normal);
+}
+
+a { color: var(--brand-primary); text-decoration: none; }
+button { cursor: pointer; font-family: inherit; }
+input, textarea, select { font-family: inherit; font-size: inherit; }
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* ── 앱 레이아웃 ── */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transition: margin-left var(--transition-normal);
+}
+
+.app-content {
+  flex: 1;
+  padding: 24px 8px;
+  overflow-y: auto;
+  overflow-x: auto;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+}
+
+/* ── 유틸리티 ── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+.glass {
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+[data-theme="dark"] .glass {
+  background: rgba(30,41,59,0.8);
+}
+
+/* ── 반응형 ── */
+@media (max-width: 768px) {
+  html { font-size: 13px; }
+  .app-content { padding: 16px; padding-bottom: calc(var(--bottom-nav-height) + 16px); }
+}
+
+@media (max-width: 480px) {
+  .app-content { padding: 12px; padding-bottom: calc(var(--bottom-nav-height) + 12px); }
+}
+
+.calendar-print-title {
+  display: none;
+}
+
+/* ── 인쇄 전용: 앱 내 탭/네비게이션 제거 후 현재 화면만 출력 ── */
+@media print {
+  @page {
+    margin: 6mm;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: auto;
+    background: #ffffff !important;
+  }
+
+  .header,
+  .top-tabs-shell,
+  .sidebar,
+  .bottom-nav,
+  .toast-container,
+  .shockwave-context-menu,
+  .sw-stats-sidebar,
+  .pt-stats-tabs,
+  .print-toggle,
+  .theme-toggle {
+    display: none !important;
+  }
+
+  body.calendar-only-print .staff-side {
+    display: none !important;
+  }
+
+  /* 스크롤바 인쇄 방지 */
+  body.calendar-only-print,
+  body.calendar-only-print html,
+  body.calendar-only-print .app-layout,
+  body.calendar-only-print .app-main,
+  body.calendar-only-print .app-content,
+  body.calendar-only-print .staff-layout {
+    overflow: hidden !important;
+  }
+  body.calendar-only-print .calendar-print-title {
+    display: block !important;
+    text-align: center;
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1e3a8a;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+    height: 28px;
+  }
+
+  /* ── 5주차 달력: A4 가로 꽉 채움 ── */
+  body.calendar-only-print .staff-calendar {
+    width: 100% !important;
+    height: 188mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin-left: 0 !important;
+  }
+
+  body.calendar-only-print .calendar-grid {
+    width: 100% !important;
+    height: 100% !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    grid-template-rows: auto;
+    grid-auto-rows: 1fr;
+    flex: 1 !important;
+  }
+
+  /* 요일 헤더: 높이 고정 및 여백 제거하여 글자 크기 극대화 */
+  body.calendar-only-print .calendar-weekday-header {
+    height: 28px !important;
+    min-height: 28px !important;
+    line-height: 28px !important;
+    padding: 0 !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  body.calendar-only-print .calendar-cell {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  body.calendar-only-print .memo-slot {
+    min-height: 0 !important;
+    padding: 0 !important; /* 내부 여백 완전 제거 */
+    font-size: 1.0rem !important; /* 1.2rem -> 1.0rem으로 잘림 방지 및 극대화 유지 */
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    box-sizing: border-box !important;
+  }
+
+  body.calendar-only-print .calendar-date {
+    flex: 0 0 24px !important; /* 글자 크기 극대화를 위한 높이 확보 */
+    font-size: 1.4rem !important; /* 1.05rem -> 1.4rem 극대화 */
+    font-weight: 800 !important; /* 굵게 강조 */
+    padding: 0 2px !important;
+    line-height: 24px !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+  }
+
+  body.calendar-only-print .calendar-date-number {
+    width: auto !important;
+    height: auto !important;
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+  }
+
+  /* 인쇄 시 오늘 날짜 하이라이트(파란색) 제거 */
+  body.calendar-only-print .today .calendar-date {
+    background: transparent !important;
+  }
+  body.calendar-only-print .today .calendar-date-number {
+    color: var(--text-primary) !important;
+  }
+  body.calendar-only-print .today.sunday .calendar-date-number,
+  body.calendar-only-print .today.holiday .calendar-date-number {
+    color: #e53e3e !important;
+  }
+  body.calendar-only-print .today.saturday .calendar-date-number {
+    color: #3b82f6 !important;
+  }
+
+  /* 메모 컨테이너 여백 완전 제거 */
+  body.calendar-only-print .calendar-memos {
+    gap: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* ── 6주차 달력: 날짜/메모만 축소하여 한 장에 맞춤 (타이틀은 이미 16pt) ── */
+  body.calendar-only-print[data-calendar-weeks="6"] .staff-calendar {
+    height: 194mm !important; /* 6주차에 최대한 공간 확보 */
+  }
+
+  body.calendar-only-print[data-calendar-weeks="6"] .calendar-date {
+    flex: 0 0 20px !important; /* 글자 크기 극대화를 위한 높이 확보 */
+    font-size: 1.2rem !important; /* 0.95rem -> 1.2rem 극대화 */
+    font-weight: 800 !important; /* 굵게 강조 */
+    padding: 0 2px !important;
+    line-height: 20px !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  body.calendar-only-print[data-calendar-weeks="6"] .calendar-date-number {
+    width: auto !important;
+    height: auto !important;
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+  }
+
+  body.calendar-only-print[data-calendar-weeks="6"] .memo-slot {
+    min-height: 0 !important;
+    padding: 0 !important; /* 내부 여백 완전 제거 */
+    font-size: 0.9rem !important; /* 0.7rem -> 0.9rem 극대화 */
+    line-height: 1 !important;
+    font-weight: 800 !important;
+  }
+
+  /* ── 6주차 달이지만 5주만 인쇄하기로 선택한 경우: 마지막 주 숨김 ── */
+  body.hide-last-week .calendar-cell:nth-last-child(-n+7) {
+    display: none !important;
+  }
+  /* 5주로 강제하므로 5주차 레이아웃(192mm, 큰 글씨) 적용 */
+  body.hide-last-week .staff-calendar {
+    height: 188mm !important;
+  }
+  body.hide-last-week .memo-slot {
+    min-height: 0 !important;
+    padding: 0 !important; /* 내부 여백 완전 제거 */
+    font-size: 1.0rem !important; /* 1.15rem -> 1.0rem으로 동일하게 맞추어 균일한 가독성 제공 */
+    line-height: 1 !important;
+    font-weight: 800 !important;
+  }
+  body.hide-last-week .calendar-date {
+    flex: 0 0 24px !important; /* 글자 크기 극대화를 위한 높이 확보 */
+    font-size: 1.4rem !important; /* 1.15rem -> 1.4rem 극대화 */
+    font-weight: 800 !important; /* 굵게 강조 */
+    padding: 0 2px !important;
+    line-height: 24px !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+  body.hide-last-week .calendar-date-number {
+    width: auto !important;
+    height: auto !important;
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+  }
+  .app-layout,
+  .app-main,
+  .app-content {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  .staff-layout,
+  .sw-stats-layout {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .sw-stats-container,
+  .sw-stats-panel,
+  .sw-settlement-stack,
+  .sw-settlement-card,
+  .sw-grid-card {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .sw-stats-body {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 10mm 15mm !important; /* 넉넉한 여백 추가 */
+  }
+
+  .sw-grid-card-header,
+  body:not(.new-patient-print):not(.settlement-print) .sw-settlement-header,
+  body:not(.new-patient-print):not(.settlement-print) .sw-settlement-meta {
+    display: none !important;
+  }
+
+  .sw-grid-shell,
+  .sw-grid-card-table,
+  .sw-settlement-table-wrap,
+  .sw-compact-table-wrap,
+  .sw-new-patient-table-wrap,
+  .sw-summary-table-wrap,
+  .sw-six-month-summary-wrap {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 auto 12mm !important; /* 가운데 정렬 및 하단 간격 */
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.new-patient-print,
+  body.new-patient-print html,
+  body.new-patient-print .app-layout,
+  body.new-patient-print .app-main,
+  body.new-patient-print .app-content,
+  body.new-patient-print .sw-stats-layout,
+  body.new-patient-print .sw-stats-container,
+  body.new-patient-print .sw-stats-panel,
+  body.new-patient-print .sw-stats-body,
+  body.new-patient-print .sw-settlement-stack,
+  body.new-patient-print .sw-settlement-card,
+  body.settlement-print,
+  body.settlement-print html,
+  body.settlement-print .app-layout,
+  body.settlement-print .app-main,
+  body.settlement-print .app-content,
+  body.settlement-print .sw-stats-layout,
+  body.settlement-print .sw-stats-container,
+  body.settlement-print .sw-stats-panel,
+  body.settlement-print .sw-stats-body,
+  body.settlement-print .sw-settlement-stack,
+  body.settlement-print .sw-settlement-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body.new-patient-print .sw-settlement-card,
+  body.settlement-print .sw-settlement-card {
+    display: block !important;
+  }
+
+  body.new-patient-print .sw-settlement-header,
+  body.new-patient-print .sw-settlement-meta,
+  body.settlement-print .sw-settlement-header,
+  body.settlement-print .sw-settlement-meta {
+    display: flex !important;
+  }
+
+  body.new-patient-print .sw-settlement-header,
+  body.settlement-print .sw-settlement-header {
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6mm !important;
+    width: 95% !important;
+    max-width: 95% !important;
+    box-sizing: border-box !important;
+    margin: 5mm auto 4mm !important;
+    padding: 0 !important;
+  }
+
+  body.new-patient-print .sw-settlement-header h2,
+  body.settlement-print .sw-settlement-header h2 {
+    display: block !important;
+    margin: 0 !important;
+    font-size: 14pt !important;
+    line-height: 1.1 !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+  }
+
+  body.new-patient-print .sw-settlement-meta span,
+  body.settlement-print .sw-settlement-meta span {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 0 !important;
+    padding: 1mm 2.5mm !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 3mm !important;
+    font-size: 11pt !important;
+    line-height: 1.1 !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+    background: #ffffff !important;
+  }
+
+  body.settlement-print .sw-recent-period-control input {
+    border: none !important;
+    background: transparent !important;
+    color: #111827 !important;
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    padding: 0 !important;
+    width: auto !important;
+    text-align: right !important;
+  }
+
+  body.new-patient-print .sw-settlement-table-wrap,
+  body.new-patient-print .sw-compact-table-wrap,
+  body.settlement-print .sw-settlement-table-wrap,
+  body.settlement-print .sw-compact-table-wrap {
+    display: block !important;
+    width: 95% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.settlement-print .sw-settlement-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  body.settlement-print .sw-settlement-table th,
+  body.settlement-print .sw-settlement-table td {
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 1.5mm 1mm !important;
+    font-size: 10pt !important;
+    line-height: 1.15 !important;
+    border-right: 0.7px solid #94a3b8 !important;
+    border-bottom: 0.7px solid #94a3b8 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+
+  /* 결산 테이블 1열(첫 번째 열) 가운데 정렬 */
+  body.settlement-print .sw-settlement-table td:first-child,
+  body.settlement-print .sw-settlement-table th:first-child {
+    text-align: center !important;
+    padding-left: 0 !important;
+  }
+
+  body.settlement-print .sw-settlement-table thead th {
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    padding: 2mm 1mm !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table thead .therapist-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table thead .grand-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .therapist-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .grand-col {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+  }
+
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .prescription-col {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  /* 처방건수 및 합계 행 폰트 강조 */
+  body.settlement-print .sw-settlement-table tbody tr:nth-child(1) td,
+  body.settlement-print .sw-settlement-table tbody tr:nth-child(2) td,
+  body.settlement-print .sw-manual-compact-settlement-table tbody tr:nth-child(1) td,
+  body.settlement-print .sw-manual-compact-settlement-table tbody tr:nth-child(2) td {
+    font-size: 13.5pt !important;
+    font-weight: 800 !important;
+  }
+
+  /* 상단 금액 행 폰트 강조 */
+  body.settlement-print .sw-settlement-table tbody tr:nth-child(3) td,
+  body.settlement-print .sw-settlement-table tbody tr:nth-child(4) td,
+  body.settlement-print .sw-manual-compact-settlement-table tbody tr:nth-child(3) td,
+  body.settlement-print .sw-manual-compact-settlement-table tbody tr:nth-child(4) td {
+    font-size: 12pt !important;
+    font-weight: 800 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-amount-row td.amount,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-incentive-row td.incentive,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row td.amount,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row td.incentive {
+    font-size: 15pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row td,
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row td {
+    font-size: 16pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .prescription-incentive-row th,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .prescription-incentive-row td,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row th,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row td {
+    background: #fff7cc !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-amount-row td.grand-value.amount,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table .settlement-incentive-row td.grand-value.incentive,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row td.grand-value.amount,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row td.grand-value.incentive {
+    font-size: 16pt !important;
+    background: #fff7cc !important;
+  }
+
+  body.settlement-print .sw-settlement-table .label-col,
+  body.settlement-print .sw-settlement-table .row-label {
+    width: 18% !important;
+    font-weight: 800 !important;
+    font-size: 10.5pt !important;
+    text-align: center !important;
+    padding-left: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  body.settlement-print .sw-manual-compact-settlement-table .label-col,
+  body.settlement-print .sw-manual-compact-settlement-table .row-label {
+    width: 25.5% !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table:not(.sw-manual-compact-settlement-table) .label-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-settlement-table:not(.sw-manual-compact-settlement-table) .row-label {
+    font-size: 12.5pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .label-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .row-label {
+    font-size: 12.65pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-amount-row th.row-label,
+  html[data-print-orientation="landscape"] body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table .settlement-incentive-row th.row-label {
+    font-size: 12.65pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  body.settlement-print .sw-manual-compact-settlement-table thead .prescription-col,
+  body.settlement-print .sw-manual-compact-settlement-table tbody td {
+    width: 17.14% !important;
+    min-width: 0 !important;
+    padding-left: 1.3mm !important;
+    padding-right: 1.3mm !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .therapist-col,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table thead .grand-col {
+    width: 34.28% !important;
+    min-width: 0 !important;
+  }
+
+  body.settlement-print .sw-manual-settlement-stack .sw-settlement-table-wrap {
+    width: 81% !important;
+    margin: 0 0 0 2.5% !important;
+  }
+
+  body.settlement-print .sw-manual-settlement-stack .sw-settlement-header {
+    width: 81% !important;
+    max-width: 81% !important;
+    margin: 5mm 0 4mm 2.5% !important;
+    gap: 3mm !important;
+  }
+
+  body.settlement-print .sw-manual-settlement-stack .sw-settlement-meta {
+    flex-wrap: nowrap !important;
+    justify-content: flex-end !important;
+    min-width: 0 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table tbody td.amount,
+  body.settlement-print .sw-settlement-card:first-of-type .sw-manual-compact-settlement-table tbody td.incentive {
+    font-size: 14pt !important;
+    font-weight: 900 !important;
+    line-height: 1.05 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type {
+    width: 55% !important;
+    max-width: 55% !important;
+    min-width: 0 !important;
+    margin: 8mm 0 0 2.5% !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    margin-bottom: 3mm !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-header h2 {
+    font-size: 11pt !important;
+    white-space: nowrap !important;
+    display: block !important;
+    margin: 0 !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type .sw-settlement-meta {
+    display: flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+  }
+
+  body.settlement-print .sw-settlement-card:last-of-type .sw-compact-table-wrap,
+  body.settlement-print .sw-settlement-card:last-of-type .sw-six-month-summary-wrap {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  body.settlement-print .sw-manual-summary-card {
+    width: 47% !important;
+    max-width: 47% !important;
+  }
+
+  body.settlement-print .sw-summary-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border: none !important;
+  }
+
+  body.settlement-print .sw-summary-table th,
+  body.settlement-print .sw-summary-table td {
+    padding: 2mm 1.5mm !important;
+    font-size: 12.5pt !important;
+    line-height: 1.15 !important;
+    border-right: 0.7px solid #94a3b8 !important;
+    border-bottom: 0.7px solid #94a3b8 !important;
+    text-align: center !important;
+  }
+
+  body.settlement-print .sw-summary-table thead th {
+    font-weight: 800 !important;
+    font-size: 13.5pt !important;
+  }
+
+  body.settlement-print .sw-summary-table th:first-child,
+  body.settlement-print .sw-summary-table td:first-child {
+    width: 21.6% !important;
+    white-space: nowrap !important;
+  }
+
+  body.settlement-print .sw-manual-summary-card .sw-summary-table th:first-child,
+  body.settlement-print .sw-manual-summary-card .sw-summary-table td:first-child {
+    width: 14.69% !important;
+  }
+
+  body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(2),
+  body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(2) {
+    width: 10.84% !important;
+  }
+
+  body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(3),
+  body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(3) {
+    width: 19.2% !important;
+  }
+
+  body.settlement-print .sw-manual-summary-card .sw-summary-table th:nth-child(4),
+  body.settlement-print .sw-manual-summary-card .sw-summary-table td:nth-child(4) {
+    width: 10.84% !important;
+  }
+
+  body.settlement-print .sw-summary-table tbody tr:first-child th,
+  body.settlement-print .sw-summary-table tbody tr:first-child td {
+    background: #fff7cc !important;
+    font-size: 13.5pt !important;
+    font-weight: 900 !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table,
+  body.new-patient-print .sw-compact-new-patient-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    border: 1.2px solid #94a3b8 !important;
+    border-radius: 0 !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table th,
+  body.new-patient-print .sw-new-patient-table td,
+  body.new-patient-print .sw-compact-new-patient-table th,
+  body.new-patient-print .sw-compact-new-patient-table td {
+    width: auto !important;
+    min-width: 0 !important;
+    height: 7.2mm !important;
+    padding: 1.2mm 1mm !important;
+    border-right: 0.8px solid #b6c2d1 !important;
+    border-bottom: 0.8px solid #d4dde8 !important;
+    font-size: 8.8pt !important;
+    line-height: 1.05 !important;
+    white-space: normal !important;
+    word-break: keep-all !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table col,
+  body.new-patient-print .sw-compact-new-patient-table col {
+    min-width: 0 !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table thead .therapist-col,
+  body.new-patient-print .sw-compact-new-patient-table thead .therapist-col {
+    height: 7.8mm !important;
+    padding: 1.2mm 1mm !important;
+    font-size: 11.5pt !important;
+    line-height: 1.05 !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table thead .sub-col,
+  body.new-patient-print .sw-compact-new-patient-table thead .sub-col {
+    height: 6.1mm !important;
+    padding: 0.8mm 0.7mm !important;
+    font-size: 9pt !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table tbody td,
+  body.new-patient-print .sw-compact-new-patient-table tbody td {
+    height: 6.6mm !important;
+    padding: 0.9mm 0.8mm !important;
+    font-size: 8.8pt !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table tbody td.patient-name,
+  body.new-patient-print .sw-compact-new-patient-table tbody td.patient-name {
+    padding-left: 0.8mm !important;
+    padding-right: 0.8mm !important;
+    text-align: center !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table .therapist-group-end,
+  body.new-patient-print .sw-compact-new-patient-table .therapist-group-end {
+    border-right: 1.2px solid #8da0b8 !important;
+  }
+
+  body.new-patient-print .sw-new-patient-table thead th:last-child,
+  body.new-patient-print .sw-new-patient-table tbody td:last-child,
+  body.new-patient-print .sw-compact-new-patient-table thead th:last-child,
+  body.new-patient-print .sw-compact-new-patient-table tbody td:last-child {
+    border-right: 0.8px solid #b6c2d1 !important;
+  }
+}
+
+/* ── 애니메이션 ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in { animation: fadeIn var(--transition-normal) ease-out; }
+.animate-slide-up { animation: slideUp var(--transition-slow) ease-out; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-hover) 50%, var(--bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ── 스켈레톤 로딩 시스템 ── */
+.loading-skeleton-grid,
+.loading-skeleton-settlement {
+  animation: fadeIn 200ms ease-out;
+  padding: 16px;
+}
+
+.skeleton-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color-light);
+}
+
+.skeleton-table {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color-light);
+  overflow: hidden;
+}
+
+.skeleton-table-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 1px;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+}
+
+.skeleton-cell-header {
+  height: 28px;
+  border-radius: 4px;
+}
+
+.skeleton-table-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 1px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border-color-light);
+  animation: fadeIn 300ms ease-out both;
+}
+
+.skeleton-cell {
+  height: 22px;
+  border-radius: 3px;
+}
+
+.skeleton-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color-light);
+  padding: 24px;
+}
+
+.skeleton-settlement-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-settlement-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  animation: fadeIn 300ms ease-out both;
+}
+
+/* 인라인 로더 */
+.inline-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 16px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.inline-loader-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid var(--border-color-light);
+  border-top-color: var(--brand-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 페이드 전환 래퍼 */
+.fade-transition-wrapper {
+  animation: fadeSlideIn 250ms ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 탑 로딩 프로그레스 바 */
+.top-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 99999;
+  background: transparent;
+  pointer-events: none;
+}
+
+.top-loading-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, var(--brand-primary), var(--brand-secondary, #7c3aed), transparent);
+  border-radius: 0 2px 2px 0;
+  animation: loadingSlide 1.2s ease-in-out infinite;
+}
+
+@keyframes loadingSlide {
+  0% { left: -30%; }
+  100% { left: 100%; }
+}
+
+/* ── 클립보드 시각적 피드백 (Marching Ants) ── */
+@keyframes marching-ants {
+  to { border-image-outset: 0; outline-offset: -2px; outline-style: dashed; outline-width: 2px; }
+  from { outline-offset: -2px; outline-style: dashed; outline-width: 2px; outline-color: transparent; }
+}
+
+/* 더 직관적이고 부드러운 애니메이션을 위한 새로운 방식 */
+@keyframes ants {
+  0% { border-dash-offset: 0; }
+  100% { border-dash-offset: 8; }
+}
+
+.marching-ants-blue {
+  outline: 2px dashed #3b82f6 !important;
+  outline-offset: -2px !important;
+  animation: ants-animation 0.5s infinite linear !important;
+}
+
+.marching-ants-red {
+  outline: 2px dashed #ef4444 !important;
+  outline-offset: -2px !important;
+  animation: ants-animation 0.5s infinite linear !important;
+}
+
+@keyframes ants-animation {
+  from { outline-offset: -2px; }
+  to { outline-offset: -4px; }
+}
+
+/* 실제 실선/점선 흐르는 효과를 위한 더 정교한 구현 */
+.gc-copy-source {
+  position: relative;
+  z-index: 10;
+}
+.gc-copy-source::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed #3b82f6;
+  pointer-events: none;
+  animation: ants-flow 0.6s infinite linear;
+  z-index: 11;
+}
+
+.gc-cut-source {
+  position: relative;
+  z-index: 10;
+}
+.gc-cut-source::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed #ef4444;
+  pointer-events: none;
+  animation: ants-flow 0.6s infinite linear;
+  z-index: 11;
+}
+
+@keyframes ants-flow {
+  from { outline: 2px dashed transparent; }
+  to { outline: 2px dashed currentColor; }
+}
+
+/* 가상 요소를 이용한 실제 점선 흐름 효과 */
+.marching-ants {
+  position: relative;
+}
+.marching-ants::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed var(--ants-color, #3b82f6);
+  animation: marching-ants-animation 1s infinite linear;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@keyframes marching-ants-animation {
+  0% { outline: 2px dashed var(--ants-color); outline-offset: -2px; }
+  50% { outline: 2px dashed transparent; outline-offset: -2px; }
+  100% { outline: 2px dashed var(--ants-color); outline-offset: -2px; }
+}
+
+/* 최종 선정한 부드러운 점선 애니메이션 */
+.ants-blue { --ants-color: #3b82f6; }
+.ants-red { --ants-color: #ef4444; }
+
+.ants-active {
+  position: relative;
+  overflow: visible !important;
+}
+.ants-active::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 2px dashed var(--ants-color, #3b82f6);
+  pointer-events: none;
+  z-index: 10;
+  animation: ants-pulse 1s tablet infinite;
+}
+
+@keyframes ants-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
