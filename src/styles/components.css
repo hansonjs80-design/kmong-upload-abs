@@ -63,6 +63,7 @@
 @media (max-width: 768px) {
   .header { padding: 0 16px; }
   .header-title { font-size: 1.15rem; }
+  .header-right .theme-toggle { display: none; }
   .mobile-only { display: flex; }
 }
 
