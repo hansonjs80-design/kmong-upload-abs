@@ -7,6 +7,8 @@ import {
   cloneMergeSpanWithMeta,
   stripReservationTimeFromMergeSpan,
   parseSchedulerPatientIdentity,
+  getExplicitVisitSuffix,
+  getNonVisitParentheticalSuffix,
 } from '../../lib/schedulerUtils';
 import { markIntentionalClearPayload, getExpandedMergeKeys, buildScheduleCellPayload } from '../../lib/scheduleMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
@@ -489,11 +491,26 @@ export default function useScheduleClipboardActions({
           true,
           preloadedData
         );
+
+        // 복사 시점에 이미 완성된 회차 접미사(예: (3) 또는 *) 추출
+        const itemVisitSuffix = getExplicitVisitSuffix(item.content);
+        const itemNoteSuffix = getNonVisitParentheticalSuffix(item.content);
+
+        let finalContent = result.text || item.content;
+        if (itemVisitSuffix || itemNoteSuffix) {
+          const resultVisitSuffix = getExplicitVisitSuffix(finalContent);
+          const resultNoteSuffix = getNonVisitParentheticalSuffix(finalContent);
+          const baseText = finalContent
+            .slice(0, finalContent.length - (resultVisitSuffix?.length || 0) - (resultNoteSuffix?.length || 0))
+            .trim();
+          finalContent = `${baseText}${itemVisitSuffix || ''}${itemNoteSuffix || ''}`;
+        }
+
         return {
           ...item,
-          content: result.text || item.content,
-          prescription: result.prescription || item.prescription,
-          body_part: result.bodyPart || item.body_part,
+          content: finalContent,
+          prescription: item.prescription || result.prescription,
+          body_part: item.body_part || result.bodyPart,
           merge_span: stripReservationTimeFromMergeSpan(result.mergeSpan || item.merge_span),
         };
       }

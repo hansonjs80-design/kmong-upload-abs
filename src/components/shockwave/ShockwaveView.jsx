@@ -341,7 +341,8 @@ const MemoizedCell = memo(({
   editValue,
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef,
-  compactEditingInput
+  compactEditingInput,
+  visitOnLowerRowByPrescription = {}
 }) => {
   const resizerRef = useRef(null);
   const lastTouchEndRef = useRef(0);
@@ -353,6 +354,7 @@ const MemoizedCell = memo(({
   const cellMemoList = getMemoListFromMergeSpan(effectiveMergeSpan);
   const hasCellMemo = cellMemoList.length > 0;
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
+  const isVisitOnLowerRow = cellPrescription ? !!visitOnLowerRowByPrescription[cellPrescription] : false;
   const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
 
   const isEditing = editingCell === cellKey;
@@ -538,7 +540,7 @@ const MemoizedCell = memo(({
                 ) : null}
                 {displayData.visitSuffix ? (
                   <>
-                    {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
+                    {visualRowSpan > 1 && isVisitOnLowerRow && !displayData.noteSuffix ? <br /> : null}
                     {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
                   </>
                 ) : null}
@@ -626,7 +628,7 @@ const MemoizedCell = memo(({
               ) : null}
               {displayData.visitSuffix ? (
                 <>
-                  {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
+                  {visualRowSpan > 1 && isVisitOnLowerRow && !displayData.noteSuffix ? <br /> : null}
                   {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
                 </>
               ) : null}
@@ -637,6 +639,7 @@ const MemoizedCell = memo(({
     );
   }
 }, (prevProps, nextProps) => {
+  if (prevProps.visitOnLowerRowByPrescription !== nextProps.visitOnLowerRowByPrescription) return false;
   if (prevProps.pendingContent !== nextProps.pendingContent) return false;
   if (prevProps.pendingMergeSpan !== nextProps.pendingMergeSpan) return false;
   if (prevProps.cellData !== nextProps.cellData) return false;
@@ -1708,6 +1711,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     clearImmediateCellDisplay,
     addToast,
     setContextMenu,
+    treatmentMergeOptions,
   });
 
   const {
@@ -2448,6 +2452,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               promoteFocusedInputToEditor={promoteFocusedInputToEditor}
                               skipNextEditBlurSaveRef={skipNextEditBlurSaveRef}
                               compactEditingInput={isCompactScheduleRowHeight(rowHeight)}
+                              visitOnLowerRowByPrescription={visitOnLowerRowByPrescription}
                             />
                           );
                         }
