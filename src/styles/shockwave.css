@@ -318,6 +318,19 @@
   grid-column: 2 / -1;
 }
 
+.sw-day-header-label {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.sw-day-header-label--mobile {
+  display: none;
+}
+
 .sw-day-header-cell.holiday {
   background: var(--sw-holiday-header);
   color: var(--cal-holiday-text);
@@ -908,6 +921,8 @@
   
   .sw-cell { font-size: var(--sw-cell-font-size); min-height: 20px; }
   .sw-day-header-cell { font-size: 0.68rem; padding: 6px 2px; }
+  .sw-day-header-label--desktop { display: none; }
+  .sw-day-header-label--mobile { display: inline-block; }
   .sw-therapist-name { font-size: 0.62rem; padding: 4px 2px; }
 }
 

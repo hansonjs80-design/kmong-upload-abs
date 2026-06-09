@@ -2161,7 +2161,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       <div className="sw-week-header-cell">{weekIdx + 1}주차</div>
                     )}
                     <div className={`${headerClass}${showTimeCol ? ' with-week-col' : ''}`}>
-                      {dayInfo.month}월 {dayInfo.day}일 {DAY_NAMES[dayInfo.dow]}요일
+                      <span className="sw-day-header-label sw-day-header-label--desktop">
+                        {dayInfo.month}월 {dayInfo.day}일 {DAY_NAMES[dayInfo.dow]}요일
+                      </span>
+                      <span className="sw-day-header-label sw-day-header-label--mobile">
+                        {dayInfo.month}월 {dayInfo.day}일 ({DAY_NAMES[dayInfo.dow]})
+                      </span>
                     </div>
                   </div>
 
