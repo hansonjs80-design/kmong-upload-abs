@@ -679,6 +679,16 @@
     align-items: flex-end;
     gap: 6px;
     padding: 8px 8px 0;
+    transform: translateY(0);
+    transition: transform 220ms ease, margin-bottom 220ms ease, opacity 180ms ease;
+    will-change: transform;
+  }
+
+  .top-tabs-shell.mobile-scroll-hidden {
+    transform: translateY(calc(-100% + 6px));
+    margin-bottom: calc(-1 * var(--top-tabs-mobile-collapse-offset, 52px));
+    opacity: 0.04;
+    pointer-events: none;
   }
 
   .top-tabs {

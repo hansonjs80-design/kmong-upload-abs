@@ -10,6 +10,7 @@ import {
 
 const MIN_SCHEDULE_ROW_HEIGHT = 14;
 const MIN_SCHEDULE_DAY_WIDTH = 100;
+const MIN_SCHEDULE_DAY_WIDTH_MOBILE = 70;
 const MIN_COL_RATIO = 0.2;
 const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
 
@@ -22,6 +23,14 @@ const getPointerClient = (event) => {
 };
 
 const isTouchResizeEvent = (event) => Boolean(event?.touches?.length || event?.changedTouches?.length);
+
+const getMinScheduleDayWidth = (event) => {
+  if (isTouchResizeEvent(event)) return MIN_SCHEDULE_DAY_WIDTH_MOBILE;
+  if (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches) {
+    return MIN_SCHEDULE_DAY_WIDTH_MOBILE;
+  }
+  return MIN_SCHEDULE_DAY_WIDTH;
+};
 
 const getMobileResizeLocked = () => {
   if (typeof window === 'undefined') return false;
@@ -180,10 +189,11 @@ export default function useScheduleResizeState({ colCount }) {
     event.stopPropagation();
     if (!shouldStartMobileResize(event)) return;
     const startPoint = getPointerClient(event);
+    const minDayWidth = getMinScheduleDayWidth(event);
     const dayElement = event.currentTarget.closest('.shockwave-day');
-    const currentDayWidth = dayElement?.getBoundingClientRect().width || MIN_SCHEDULE_DAY_WIDTH;
+    const currentDayWidth = dayElement?.getBoundingClientRect().width || minDayWidth;
     const normalizedDayWidth = showTimeCol
-      ? Math.max(MIN_SCHEDULE_DAY_WIDTH, currentDayWidth - TIME_COL_WIDTH)
+      ? Math.max(minDayWidth, currentDayWidth - TIME_COL_WIDTH)
       : currentDayWidth;
     dayResizeRef.current = { active: true, startX: startPoint.x };
     let latestWidth = dayColWidth || normalizedDayWidth;
@@ -192,7 +202,7 @@ export default function useScheduleResizeState({ colCount }) {
       if (!dayResizeRef.current.active) return;
       const point = getPointerClient(moveEvent);
       const delta = point.x - dayResizeRef.current.startX;
-      latestWidth = Math.max(MIN_SCHEDULE_DAY_WIDTH, normalizedDayWidth + delta);
+      latestWidth = Math.max(minDayWidth, normalizedDayWidth + delta);
       setDayColWidth(latestWidth);
     };
     const onUp = (upEvent) => {

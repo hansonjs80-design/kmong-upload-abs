@@ -12,8 +12,10 @@ export default function TopTabs() {
   const items = useMemo(() => getAllowedTabs(user), [user]);
   const [now, setNow] = useState(() => new Date());
   const [optimisticPath, setOptimisticPath] = useState(null);
+  const [isMobileTabsHidden, setIsMobileTabsHidden] = useState(false);
   const routeTimerRef = useRef(null);
   const measureFrameRef = useRef(null);
+  const lastScrollYRef = useRef(0);
   const tabWrapRefs = useRef(new Map());
   const activeContentRefs = useRef(new Map());
   const inactiveContentRefs = useRef(new Map());
@@ -36,6 +38,44 @@ export default function TopTabs() {
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    lastScrollYRef.current = window.scrollY || 0;
+
+    const handleScroll = () => {
+      if (!mediaQuery.matches) {
+        setIsMobileTabsHidden(false);
+        return;
+      }
+
+      const nextY = window.scrollY || 0;
+      const delta = nextY - lastScrollYRef.current;
+      lastScrollYRef.current = nextY;
+
+      if (nextY < 24 || delta < -8) {
+        setIsMobileTabsHidden(false);
+        return;
+      }
+
+      if (delta > 8) {
+        setIsMobileTabsHidden(true);
+      }
+    };
+
+    const handleMediaChange = () => {
+      if (!mediaQuery.matches) setIsMobileTabsHidden(false);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    mediaQuery.addEventListener?.('change', handleMediaChange);
+    mediaQuery.addListener?.(handleMediaChange);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      mediaQuery.removeEventListener?.('change', handleMediaChange);
+      mediaQuery.removeListener?.(handleMediaChange);
+    };
   }, []);
 
   const measureTabContentWidths = useCallback(() => {
@@ -113,7 +153,7 @@ export default function TopTabs() {
   };
 
   return (
-    <div className="top-tabs-shell">
+    <div className={`top-tabs-shell${isMobileTabsHidden ? ' mobile-scroll-hidden' : ''}`}>
       <nav className="top-tabs" aria-label="주요 화면 이동">
         <div className="top-tabs-track">
           {items.map((item) => {

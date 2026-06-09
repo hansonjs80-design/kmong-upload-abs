@@ -2314,7 +2314,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
                   {(
                     <div
-                      className="sw-day-resize-handle"
+                      className={`sw-day-resize-handle${dayIdx === weekDays.length - 1 ? ' mobile-final-day-resize' : ''}`}
                       onMouseDown={(e) => {
                         startDayResize(e, showTimeCol);
                       }}
@@ -2327,6 +2327,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               );
             })}
           </div>
+          {weekIdx === weeks.length - 1 && (
+            <div
+              className="shockwave-mobile-row-resize-handle"
+              title={`행 높이 조절 (${rowHeight}px)`}
+              aria-label="시간 행 높이 조절"
+              onMouseDown={startRowResize}
+              onTouchStart={startRowResize}
+            />
+          )}
         </div>
         );
       }), [

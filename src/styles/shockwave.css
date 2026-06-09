@@ -428,15 +428,43 @@
   background: rgba(234, 67, 53, 0.5);
 }
 
+.shockwave-mobile-row-resize-handle {
+  display: none;
+}
+
 @media (max-width: 768px) {
-  .sw-col-resize-handle,
-  .sw-day-resize-handle {
-    width: 16px;
-    transform: translateX(-8px);
+  .shockwave-week-floating-actions--left {
+    display: none;
   }
 
+  .sw-col-resize-handle,
   .sw-day-resize-handle {
+    display: none;
+  }
+
+  .sw-day-resize-handle.mobile-final-day-resize {
+    display: block;
+    width: 16px;
+    transform: translateX(-8px);
     right: -8px;
+  }
+
+  .shockwave-mobile-row-resize-handle {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -8px;
+    height: 16px;
+    cursor: row-resize;
+    z-index: 45;
+    background: transparent;
+    touch-action: none;
+  }
+
+  .shockwave-mobile-row-resize-handle:hover,
+  .shockwave-mobile-row-resize-handle:active {
+    background: rgba(66, 133, 244, 0.5);
   }
 }
 

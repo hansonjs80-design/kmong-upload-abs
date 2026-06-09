@@ -1337,7 +1337,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
         {WEEKDAYS.map((day, i) => (
           <div key={`h-${i}`} className={`calendar-weekday-header${i === 0 ? ' sunday' : ''}${i === 6 ? ' saturday' : ''}`} style={{ position: 'relative' }}>
             {day}
-            <div className="col-resizer" onMouseDown={startColResize} onTouchStart={startColResize} />
+            <div className={`col-resizer${i === 6 ? ' mobile-final-col-resizer' : ''}`} onMouseDown={startColResize} onTouchStart={startColResize} />
           </div>
         ))}
         {grid.map((week, wi) => week.map((dayInfo, di) => {
@@ -1354,7 +1354,7 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
               <div className="calendar-date">
                 <span className="calendar-date-number">{dayInfo.day}</span>
                 <div
-                  className="date-row-resizer"
+                  className={`date-row-resizer${wi === 0 ? ' mobile-first-date-row-resizer' : ''}`}
                   title="날짜 셀 높이 조절"
                   onMouseDown={startDateRowResize}
                   onTouchStart={startDateRowResize}
@@ -1400,7 +1400,9 @@ export default function StaffCalendar({ hiddenDepartments = [], showLastRows = t
                 })}
               </div>
               {di < 6 && <div className="col-resizer" onMouseDown={startColResize} onTouchStart={startColResize} />}
+              {di === 6 && <div className="col-resizer mobile-final-col-resizer" onMouseDown={startColResize} onTouchStart={startColResize} />}
               {wi < grid.length - 1 && <div className="row-resizer" onMouseDown={startRowResize} onTouchStart={startRowResize} />}
+              {wi === grid.length - 1 && <div className="row-resizer mobile-final-row-resizer" onMouseDown={startRowResize} onTouchStart={startRowResize} />}
             </div>
           );
         }))}

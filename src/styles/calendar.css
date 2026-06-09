@@ -150,6 +150,10 @@
   opacity: 0.5;
 }
 
+.col-resizer.mobile-final-col-resizer {
+  display: none;
+}
+
 .row-resizer {
   position: absolute;
   bottom: -4px;
@@ -163,6 +167,10 @@
 .row-resizer:hover, .row-resizer:active {
   background: var(--brand-primary);
   opacity: 0.5;
+}
+
+.row-resizer.mobile-final-row-resizer {
+  display: none;
 }
 
 .date-row-resizer {
@@ -187,6 +195,18 @@
 }
 
 @media (max-width: 768px) {
+  .col-resizer,
+  .row-resizer,
+  .date-row-resizer {
+    display: none;
+  }
+
+  .col-resizer.mobile-final-col-resizer,
+  .row-resizer.mobile-final-row-resizer,
+  .date-row-resizer.mobile-first-date-row-resizer {
+    display: block;
+  }
+
   .col-resizer {
     right: -8px;
     width: 16px;
