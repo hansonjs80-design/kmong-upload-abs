@@ -37,6 +37,7 @@ import useScheduleTimeSlots from './useScheduleTimeSlots';
 import useScheduleUndoActions from './useScheduleUndoActions';
 import useScheduleViewState from './useScheduleViewState';
 import useScheduleHoverHighlight from './useScheduleHoverHighlight';
+import { getCompactCellVisualRowSpan } from './schedulerCompactCellUtils';
 import {
   isPatientHistoryShortcut,
   isBodyPartMenuShortcut,
@@ -2500,7 +2501,24 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             visualRowSpan = daySlots.filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
                           }
 
-                          // Removed cell compaction logic to ensure uniform row heights and borders
+                          // ── 행 높이 10px 이하 + 내용 있는 단일 셀 + 처방/부위 없음 → 아래 행으로 시각 확장 ──
+                          visualRowSpan = getCompactCellVisualRowSpan({
+                            rowHeight,
+                            visualRowSpan,
+                            mergeSpan,
+                            content,
+                            displayCellData,
+                            isLastRenderedRow,
+                            weekIdx,
+                            dayIdx,
+                            rowIdx,
+                            colIdx,
+                            renderMemos,
+                            pendingDisplayValues,
+                            getEffectiveMergeSpan,
+                            cellKey,
+                            compactOverflowCols,
+                          });
 
                           const finalMergeSpan = { ...mergeSpan, rowSpan: visualRowSpan };
 
