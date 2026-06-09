@@ -86,23 +86,7 @@ const getTimeLabelMinutes = (slotInfo = {}) => {
   return Number(match[2]);
 };
 
-const shouldHideCompactTimeLabel = ({ slotInfo, rowHeight, intervalMinutes }) => {
-  const interval = Number(intervalMinutes) || 0;
-  if (rowHeight >= COMPACT_TIME_LABEL_ROW_HEIGHT) return false;
-  if (interval >= 20 || interval <= 0) return false;
-  const minutes = getTimeLabelMinutes(slotInfo);
-  if (!Number.isFinite(minutes)) return false;
-  return minutes % 20 !== 0;
-};
-
-const getCompactTimeLabelRowSpan = ({ rowHeight, intervalMinutes }) => {
-  const interval = Number(intervalMinutes) || 0;
-  if (rowHeight >= COMPACT_TIME_LABEL_ROW_HEIGHT) return 1;
-  if (interval <= 0 || interval >= 20) return 1;
-  const span = 20 / interval;
-  if (!Number.isInteger(span) || span < 2) return 1;
-  return span;
-};
+// Removed shouldHideCompactTimeLabel and getCompactTimeLabelRowSpan to enforce consistent grid layout
 
 const isCompactScheduleRowHeight = (rowHeight) => (
   Number(rowHeight) > 0 && Number(rowHeight) <= COMPACT_EDITING_INPUT_ROW_HEIGHT
@@ -976,14 +960,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     if (activeWeek !== null && activeRow !== null) {
       const interval = Number(settings?.interval_minutes) || 0;
-      const compactSpan = getCompactTimeLabelRowSpan({ rowHeight, intervalMinutes: interval });
-      const compactStartRow = compactSpan > 1
-        ? activeRow - (activeRow % compactSpan)
-        : activeRow;
-      const compactTimeCell = compactSpan > 1
-        ? container.querySelector(`[data-compact-time-group-row="${activeWeek}-${compactStartRow}"]`)
-        : null;
-      const timeCell = compactTimeCell || container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`);
+      const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`);
       if (timeCell) {
         timeCell.classList.add('active-row');
         const exactTimeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`);
@@ -2410,33 +2387,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       
                       // 1. Time Label
                       if (showTimeCol) {
-                        const hideCompactTimeLabel = shouldHideCompactTimeLabel({
-                          slotInfo,
-                          rowHeight,
-                          intervalMinutes: settings?.interval_minutes,
-                        });
-                        const compactTimeLabelRowSpan = getCompactTimeLabelRowSpan({
-                          rowHeight,
-                          intervalMinutes: settings?.interval_minutes,
-                        });
-                        const timeLabelRowSpan = hideCompactTimeLabel
-                          ? 1
-                          : Math.min(compactTimeLabelRowSpan, daySlots.length - slotRenderIndex);
-                        const compactTimeGroupRow = compactTimeLabelRowSpan > 1
-                          ? rowIdx - (rowIdx % compactTimeLabelRowSpan)
-                          : rowIdx;
                         elements.push(
                           <div
                             key={`time-${rowIdx}`}
-                            className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}${timeLabelRowSpan > 1 ? ' sw-time-label--merged' : ''}${hideCompactTimeLabel ? ' sw-time-label--compact-hover-label' : ''}`}
+                            className={`sw-time-label${slotInfo.isLunch ? ' lunch' : ''}${slotInfo.disabled ? ' disabled' : ''}`}
                             data-time-row={`${weekIdx}-${rowIdx}`}
                             data-time-label={slotInfo.label}
-                            data-compact-time-group-row={!hideCompactTimeLabel && compactTimeLabelRowSpan > 1 ? `${weekIdx}-${compactTimeGroupRow}` : undefined}
                             style={{
                               gridColumn: '1',
-                              gridRow: timeLabelRowSpan > 1
-                                ? `${gridRowStart} / span ${timeLabelRowSpan}`
-                                : `${gridRowStart}`,
+                              gridRow: `${gridRowStart}`,
                               borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
                             }}
                           >
@@ -2487,27 +2446,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             visualRowSpan = daySlots.filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
                           }
 
-                          // ── 행 높이 10px 이하 + 내용 있는 단일 셀 → 아래 행으로 시각 확장 ──
-                          if (
-                            rowHeight > 0 && rowHeight <= 10 &&
-                            visualRowSpan === 1 &&
-                            mergeSpan.rowSpan <= 1 &&
-                            content.trim() &&
-                            !isLastRenderedRow
-                          ) {
-                            // 아래 행 셀이 비어있는지 확인
-                            const nextRowIdx = rowIdx + 1;
-                            const nextKey = cellKey(weekIdx, dayIdx, nextRowIdx, colIdx);
-                            const nextMemo = renderMemos[nextKey];
-                            const nextContent = (pendingDisplayValues[nextKey] ?? nextMemo?.content ?? '').trim();
-                            const nextMergeSpan = getEffectiveMergeSpan(nextKey, renderMemos);
-                            const nextIsEmpty = !nextContent && !nextMergeSpan?.mergedInto && (nextMergeSpan?.rowSpan || 1) <= 1;
-                            if (nextIsEmpty) {
-                              visualRowSpan = 2;
-                              // 아래 행의 이 열을 건너뛰도록 표시
-                              compactOverflowCols.add(`${weekIdx}-${dayIdx}-${nextRowIdx}-${colIdx}`);
-                            }
-                          }
+                          // Removed cell compaction logic to ensure uniform row heights and borders
 
                           const finalMergeSpan = { ...mergeSpan, rowSpan: visualRowSpan };
 
