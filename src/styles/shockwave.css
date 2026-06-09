@@ -883,18 +883,18 @@
   .shockwave-day { 
     min-width: 30%; 
     border-right: 2px solid #000; 
+    border-top: none;
   }
-  .shockwave-day:nth-child(3n) { border-right: none; }
-  .shockwave-day:nth-child(n+4) { border-top: 2px solid #000; }
+  .shockwave-day:last-child { border-right: none; }
 }
 
 @media (max-width: 768px) {
   .shockwave-day { 
     min-width: 45%; 
     border-right: 2px solid #000; 
+    border-top: none;
   }
-  .shockwave-day:nth-child(2n) { border-right: none; }
-  .shockwave-day:nth-child(n+3) { border-top: 2px solid #000; }
+  .shockwave-day:last-child { border-right: none; }
   
   .sw-cell { font-size: var(--sw-cell-font-size); min-height: 20px; }
   .sw-day-header-cell { font-size: 0.68rem; padding: 6px 2px; }
@@ -904,10 +904,10 @@
 @media (max-width: 480px) {
   .shockwave-day { 
     min-width: 100%; 
-    border-right: none; 
-    border-bottom: 2px solid #000; 
+    border-right: 2px solid #000; 
+    border-bottom: none; 
   }
-  .shockwave-day:last-child { border-bottom: none; }
+  .shockwave-day:last-child { border-right: none; }
 }
 
 /* 충격파 환자 검색 */
