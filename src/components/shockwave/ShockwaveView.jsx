@@ -965,47 +965,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     therapistColsCSS,
   } = useScheduleResizeState({ colCount });
 
-  // ── 활성 행의 시간 셀 하이라이트 ──
-  useEffect(() => {
-    let activeWeek = null;
-    let activeRow = null;
-    if (hoverCell) {
-      activeWeek = hoverCell.weekIdx;
-      activeRow = hoverCell.rowIdx;
-    } else if (editingCell) {
-      const parts = editingCell.split('-').map(Number);
-      if (parts.length >= 3) {
-        activeWeek = parts[0];
-        activeRow = parts[2];
-      }
-    } else if (selectedCell) {
-      activeWeek = selectedCell.w;
-      activeRow = selectedCell.r;
-    }
-
-    const container = viewRef.current;
-    if (!container) return;
-
-    const prevActive = container.querySelectorAll('.sw-time-label.active-row');
-    prevActive.forEach((el) => {
-      el.classList.remove('active-row');
-      el.removeAttribute('data-active-time-label');
-    });
-
-    if (activeWeek !== null && activeRow !== null) {
-      const interval = Number(settings?.interval_minutes) || 0;
-      const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`);
-      if (timeCell) {
-        timeCell.classList.add('active-row');
-        const exactTimeCell = container.querySelector(`[data-time-row="${activeWeek}-${activeRow}"]`);
-        const exactTimeLabel = exactTimeCell?.getAttribute('data-time-label') || '';
-        if (exactTimeLabel) {
-          timeCell.setAttribute('data-active-time-label', exactTimeLabel);
-        }
-      }
-    }
-  }, [hoverCell, selectedCell, editingCell, rowHeight, settings?.interval_minutes]);
-
   const effectiveDayOverrides = useMemo(
     () => getMonthlyDayOverrides(settings?.day_overrides, currentYear, currentMonth),
     [settings?.day_overrides, currentYear, currentMonth]
@@ -1046,6 +1005,67 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     holidays,
     settings,
   });
+
+  // ── 활성 행의 시간 셀 하이라이트 ──
+  useEffect(() => {
+    let activeWeek = null;
+    let activeDay = null;
+    let activeRow = null;
+    if (hoverCell) {
+      activeWeek = hoverCell.weekIdx;
+      activeDay = hoverCell.dayIdx;
+      activeRow = hoverCell.rowIdx;
+    } else if (editingCell) {
+      const parts = editingCell.split('-').map(Number);
+      if (parts.length >= 3) {
+        activeWeek = parts[0];
+        activeDay = parts[1];
+        activeRow = parts[2];
+      }
+    } else if (selectedCell) {
+      activeWeek = selectedCell.w;
+      activeDay = selectedCell.d;
+      activeRow = selectedCell.r;
+    }
+
+    const container = viewRef.current;
+    if (!container) return;
+
+    const prevActive = container.querySelectorAll('.sw-time-label.active-row');
+    prevActive.forEach((el) => {
+      el.classList.remove('active-row');
+      el.removeAttribute('data-active-time-label');
+    });
+
+    if (activeWeek !== null && activeRow !== null) {
+      const targetDay = activeDay !== null && activeDay !== undefined ? activeDay : 0;
+      const dayInfo = weeks?.[activeWeek]?.days?.[targetDay];
+      const daySlots = dayInfo ? getTimeSlotsForDay(dayInfo) : [];
+
+      if (daySlots.length > 0) {
+        const slotRenderIndex = daySlots.findIndex((s) => s.idx === activeRow);
+        if (slotRenderIndex !== -1) {
+          // 화면에 렌더링된 실제 (병합된) 시간 셀의 인덱스를 위로 거슬러 올라가며 찾습니다.
+          let visibleSlotRenderIndex = slotRenderIndex;
+          while (visibleSlotRenderIndex > 0 && shouldHideCompactTimeLabel(visibleSlotRenderIndex, rowHeight)) {
+            visibleSlotRenderIndex--;
+          }
+          const visibleRowIdx = daySlots[visibleSlotRenderIndex]?.idx;
+          
+          if (visibleRowIdx !== undefined) {
+            const timeCell = container.querySelector(`[data-time-row="${activeWeek}-${visibleRowIdx}"]`);
+            if (timeCell) {
+              timeCell.classList.add('active-row');
+              const exactTimeLabel = daySlots[slotRenderIndex]?.label || '';
+              if (exactTimeLabel) {
+                timeCell.setAttribute('data-active-time-label', exactTimeLabel);
+              }
+            }
+          }
+        }
+      }
+    }
+  }, [hoverCell, selectedCell, editingCell, rowHeight, settings?.interval_minutes, weeks, getTimeSlotsForDay]);
 
   const shockwaveMergeSettings = useMemo(() => (
     getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave')
@@ -2079,6 +2099,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   const handleCellTouchDrag = useCallback((clientX, clientY) => {
     lastTouchPosRef.current = { active: true, x: clientX, y: clientY };
+    tooltipMousePosRef.current = { x: clientX, y: clientY };
 
     const targetElement = document.elementFromPoint(clientX, clientY);
     const cellElement = targetElement?.closest('.sw-cell');
@@ -2101,11 +2122,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         }
       }
       
-      if (tooltipRef.current && positionTooltipRef.current) {
-        positionTooltipRef.current(clientX, clientY);
+      if (tooltipRef.current && positionTooltip) {
+        positionTooltip(clientX, clientY);
       }
     }
-  }, [weeks, getTimeSlotsForDay, getTherapistNameForDate, getStaffScheduleBlockForCell, setHoverCell, selectSingleCell]);
+  }, [weeks, getTimeSlotsForDay, getTherapistNameForDate, getStaffScheduleBlockForCell, setHoverCell, selectSingleCell, positionTooltip]);
 
   const handleCellTouchDragEnd = useCallback(() => {
     lastTouchPosRef.current.active = false;
