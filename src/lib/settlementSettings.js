@@ -52,6 +52,9 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
   const rawDurationMinutes = isManual
     ? settings?.manual_therapy_duration_minutes
     : settings?.duration_minutes;
+  const rawVisitOnLowerRow = isManual
+    ? settings?.manual_therapy_visit_on_lower_row
+    : settings?.visit_on_lower_row;
 
   return {
     prescriptions: Array.isArray(prescriptions) && prescriptions.length > 0
@@ -70,6 +73,7 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
       ...fallback.duration_minutes,
       ...(rawDurationMinutes || {}),
     },
+    visit_on_lower_row: rawVisitOnLowerRow || {},
     incentive_percentage: isManual
       ? settings?.manual_therapy_incentive_percentage ?? fallback.incentive_percentage
       : settings?.incentive_percentage ?? fallback.incentive_percentage,
@@ -112,6 +116,10 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
       ...base.duration_minutes,
       ...(override?.duration_minutes || {}),
     },
+    visit_on_lower_row: {
+      ...base.visit_on_lower_row,
+      ...(override?.visit_on_lower_row || {}),
+    },
     dose_tags: override?.dose_tags || {},
     incentive_percentage: override?.incentive_overridden === true || Number(override?.incentive_percentage) > 0
       ? Number(override?.incentive_percentage) || 0
@@ -137,6 +145,7 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
         prescription_colors: nextConfig?.prescription_colors || {},
         shortcuts: nextConfig?.shortcuts || {},
         duration_minutes: nextConfig?.duration_minutes || {},
+        visit_on_lower_row: nextConfig?.visit_on_lower_row || {},
         ...(nextConfig?.dose_tags ? { dose_tags: nextConfig.dose_tags } : {}),
         incentive_percentage: Number(nextConfig?.incentive_percentage) || 0,
         incentive_overridden: true,

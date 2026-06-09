@@ -37,6 +37,14 @@ import useScheduleTimeSlots from './useScheduleTimeSlots';
 import useScheduleUndoActions from './useScheduleUndoActions';
 import useScheduleViewState from './useScheduleViewState';
 import {
+  isPatientHistoryShortcut,
+  isBodyPartMenuShortcut,
+  isTreatmentCompleteShortcut,
+  isMergeShortcut,
+  isTreatmentCancelShortcut,
+  isHolidayBackgroundShortcut,
+} from '../../lib/scheduleKeyboardUtils';
+import {
   HORIZONTAL_BORDER_COLOR,
   TIME_COL_WIDTH,
   TREATMENT_COMPLETE_BG,
@@ -342,7 +350,8 @@ const MemoizedCell = memo(({
   handleCellMouseDown, handleCellMouseEnter, setHoverCell, handleCellDoubleClick, handleCellContextMenu,
   editInputRef, handleCellSave, handleEditKeyDown, imeOpenRef, setImePreviewCell, editDraftRef, scheduleEditDraftAutosave, promoteFocusedInputToEditor, skipNextEditBlurSaveRef,
   compactEditingInput,
-  visitOnLowerRowByPrescription = {}
+  visitOnLowerRowByPrescription = {},
+  overrideVisitSuffix
 }) => {
   const resizerRef = useRef(null);
   const lastTouchEndRef = useRef(0);
@@ -356,6 +365,10 @@ const MemoizedCell = memo(({
   const cellPrescription = cellData?.prescription || effectiveMergeSpan?.meta?.prescription || '';
   const isVisitOnLowerRow = cellPrescription ? !!visitOnLowerRowByPrescription[cellPrescription] : false;
   const displayData = buildSchedulerCellDisplay(content, effectiveMergeSpan);
+  if (overrideVisitSuffix) {
+    displayData.visitSuffix = overrideVisitSuffix;
+    displayData.hasDisplayText = true;
+  }
 
   const isEditing = editingCell === cellKey;
   const isImePreview = imePreviewCell === cellKey;
@@ -530,7 +543,7 @@ const MemoizedCell = memo(({
         {!isEditing && !isImePreview && (
           <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
             {displayData.hasDisplayText ? (
-              <span className="sw-cell-main">
+              <span className="sw-cell-main" style={isVisitOnLowerRow ? { whiteSpace: 'normal' } : undefined}>
                 <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
                 {displayData.noteSuffix ? (
                   <>
@@ -618,7 +631,7 @@ const MemoizedCell = memo(({
       >
         <div className="sw-cell-display">
           {displayData.hasDisplayText ? (
-            <span className="sw-cell-main">
+            <span className="sw-cell-main" style={isVisitOnLowerRow ? { whiteSpace: 'normal' } : undefined}>
               <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
               {displayData.noteSuffix ? (
                 <>
@@ -643,6 +656,7 @@ const MemoizedCell = memo(({
   if (prevProps.pendingContent !== nextProps.pendingContent) return false;
   if (prevProps.pendingMergeSpan !== nextProps.pendingMergeSpan) return false;
   if (prevProps.cellData !== nextProps.cellData) return false;
+  if (prevProps.overrideVisitSuffix !== nextProps.overrideVisitSuffix) return false;
   
   if (prevProps.mergeSpan.rowSpan !== nextProps.mergeSpan.rowSpan) return false;
   if (prevProps.mergeSpan.colSpan !== nextProps.mergeSpan.colSpan) return false;
@@ -1036,9 +1050,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   }), [shockwaveMergeSettings?.duration_minutes, manualTherapyMergeSettings?.duration_minutes]);
 
   const visitOnLowerRowByPrescription = useMemo(() => ({
-    ...(settings?.visit_on_lower_row || {}),
-    ...(settings?.manual_therapy_visit_on_lower_row || {}),
-  }), [settings?.visit_on_lower_row, settings?.manual_therapy_visit_on_lower_row]);
+    ...(shockwaveMergeSettings?.visit_on_lower_row || {}),
+    ...(manualTherapyMergeSettings?.visit_on_lower_row || {}),
+  }), [shockwaveMergeSettings?.visit_on_lower_row, manualTherapyMergeSettings?.visit_on_lower_row]);
 
   const treatmentMergeOptions = useMemo(() => ({
     intervalMinutes: settings?.interval_minutes,
@@ -2063,6 +2077,42 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       moveEditInputCaret(e.currentTarget, e.key, e.shiftKey);
       return; // 편집 중에는 좌우 방향키로 다른 셀 이동 방지 (텍스트 커서 이동만 허용)
     }
+
+    // 단축키 검사
+    const isMeta = e.metaKey || e.ctrlKey;
+    const isDigitCode = /^Digit([1-9])$/.test(e.code);
+    const isDigitKey = /^[1-9]$/.test(e.key);
+    const isPrescription = (isMeta || e.altKey || (e.shiftKey && isMeta)) && (isDigitKey || isDigitCode);
+
+    const isShortcut =
+      isPatientHistoryShortcut(e) ||
+      isBodyPartMenuShortcut(e) ||
+      isTreatmentCompleteShortcut(e) ||
+      isMergeShortcut(e) ||
+      isTreatmentCancelShortcut(e) ||
+      isHolidayBackgroundShortcut(e) ||
+      isPrescription;
+
+    if (isShortcut) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.nativeEvent?.stopImmediatePropagation?.();
+
+      const val = e.currentTarget.value;
+      skipNextEditBlurSaveRef.current = true;
+      e.currentTarget.blur();
+
+      if (typeof e.persist === 'function') {
+        e.persist();
+      }
+
+      handleCellSave(w, d, r, c, val).then(() => {
+        setTimeout(() => {
+          handleKeyDown(e);
+        }, 50);
+      });
+      return;
+    }
     
     if (['ArrowUp', 'ArrowDown'].includes(e.key)) {
       e.preventDefault();
@@ -2089,7 +2139,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       const nc = e.shiftKey ? Math.max(0, c - 1) : Math.min(colCount - 1, c + 1);
       selectSingleCell({ w, d, r, c: nc });
     }
-  }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret]);
+  }, [
+    baseTimeSlots.length,
+    colCount,
+    selectSingleCell,
+    getAdjacentCell,
+    moveEditInputCaret,
+    handleCellSave,
+    handleKeyDown,
+    skipNextEditBlurSaveRef,
+  ]);
 
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
@@ -2343,7 +2402,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
                   {/* 스케줄 바디 */}
                   <div className="sw-schedule-body" style={{ display: 'grid', gridTemplateColumns: gridCols, gridAutoRows: 'var(--sw-row-height)' }}>
-                    {daySlots.flatMap((slotInfo, slotRenderIndex) => {
+                    {(() => { let compactOverflowCols = new Set(); return daySlots.flatMap((slotInfo, slotRenderIndex) => {
                       const rowIdx = slotInfo.idx;
                       const gridRowStart = slotRenderIndex + 1;
                       const isLastRenderedRow = slotRenderIndex === daySlots.length - 1;
@@ -2387,7 +2446,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       }
 
                       // 2. Cells
+                      // 높이가 10px 이하일 때 내용이 있는 단일 셀을 아래 행까지 시각적으로 확장하기 위한 추적
                       for (let colIdx = 0; colIdx < colCount; colIdx++) {
+                        // 위 셀이 이 행으로 확장됐으면 렌더링 생략
+                        const overflowKey = `${weekIdx}-${dayIdx}-${rowIdx}-${colIdx}`;
+                        if (compactOverflowCols.has(overflowKey)) {
+                          continue;
+                        }
+
                         const key = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
                         const rawCellData = renderMemos[key] || null;
                         const hasPendingBg = Object.prototype.hasOwnProperty.call(pendingCellBgColors, key);
@@ -2420,7 +2486,42 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             const endRowIdx = rowIdx + mergeSpan.rowSpan - 1;
                             visualRowSpan = daySlots.filter(s => s.idx >= rowIdx && s.idx <= endRowIdx).length;
                           }
+
+                          // ── 행 높이 10px 이하 + 내용 있는 단일 셀 → 아래 행으로 시각 확장 ──
+                          if (
+                            rowHeight > 0 && rowHeight <= 10 &&
+                            visualRowSpan === 1 &&
+                            mergeSpan.rowSpan <= 1 &&
+                            content.trim() &&
+                            !isLastRenderedRow
+                          ) {
+                            // 아래 행 셀이 비어있는지 확인
+                            const nextRowIdx = rowIdx + 1;
+                            const nextKey = cellKey(weekIdx, dayIdx, nextRowIdx, colIdx);
+                            const nextMemo = renderMemos[nextKey];
+                            const nextContent = (pendingDisplayValues[nextKey] ?? nextMemo?.content ?? '').trim();
+                            const nextMergeSpan = getEffectiveMergeSpan(nextKey, renderMemos);
+                            const nextIsEmpty = !nextContent && !nextMergeSpan?.mergedInto && (nextMergeSpan?.rowSpan || 1) <= 1;
+                            if (nextIsEmpty) {
+                              visualRowSpan = 2;
+                              // 아래 행의 이 열을 건너뛰도록 표시
+                              compactOverflowCols.add(`${weekIdx}-${dayIdx}-${nextRowIdx}-${colIdx}`);
+                            }
+                          }
+
                           const finalMergeSpan = { ...mergeSpan, rowSpan: visualRowSpan };
+
+                          // overrideVisitSuffix 계산
+                          let overrideVisitSuffix = undefined;
+                          const cellPrescription = displayCellData?.prescription || finalMergeSpan?.meta?.prescription || '';
+                          const isVisitOnLowerRow = cellPrescription ? !!visitOnLowerRowByPrescription[cellPrescription] : false;
+                          if (visualRowSpan > 1 && isVisitOnLowerRow) {
+                            const lastChildKey = cellKey(weekIdx, dayIdx, rowIdx + mergeSpan.rowSpan - 1, colIdx);
+                            const lastChildContent = pendingDisplayValues[lastChildKey] ?? renderMemos[lastChildKey]?.content ?? '';
+                            if (lastChildContent.trim()) {
+                              overrideVisitSuffix = lastChildContent.trim();
+                            }
+                          }
 
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
                           const therapistName = getTherapistNameForDate(colIdx, dayInfo.day) || '';
@@ -2453,11 +2554,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               skipNextEditBlurSaveRef={skipNextEditBlurSaveRef}
                               compactEditingInput={isCompactScheduleRowHeight(rowHeight)}
                               visitOnLowerRowByPrescription={visitOnLowerRowByPrescription}
+                              overrideVisitSuffix={overrideVisitSuffix}
                             />
                           );
                         }
                       return elements;
-                    })}
+                    }); })()}
                   </div>
 
                   {(
