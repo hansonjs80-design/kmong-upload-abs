@@ -496,7 +496,7 @@ const MemoizedCell = memo(({
         {!isEditing && !isImePreview && (
           <div className="sw-cell-display" style={{ pointerEvents: 'none' }}>
             {displayData.hasDisplayText ? (
-              <span className="sw-cell-main">
+              <span className="sw-cell-main" style={isVisitOnLowerRow ? { whiteSpace: 'normal' } : { whiteSpace: 'nowrap' }}>
                 <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
                 {displayData.noteSuffix ? (
                   <>
@@ -506,7 +506,7 @@ const MemoizedCell = memo(({
                 ) : null}
                 {displayData.visitSuffix ? (
                   <>
-                    {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
+                    {visualRowSpan > 1 && isVisitOnLowerRow && !displayData.noteSuffix ? <br /> : null}
                     {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
                   </>
                 ) : null}
@@ -584,7 +584,7 @@ const MemoizedCell = memo(({
       >
         <div className="sw-cell-display">
           {displayData.hasDisplayText ? (
-            <span className="sw-cell-main">
+            <span className="sw-cell-main" style={isVisitOnLowerRow ? { whiteSpace: 'normal' } : { whiteSpace: 'nowrap' }}>
               <span style={baseTextColor ? { color: baseTextColor } : undefined}>{displayData.baseText}</span>
               {displayData.noteSuffix ? (
                 <>
@@ -594,7 +594,7 @@ const MemoizedCell = memo(({
               ) : null}
               {displayData.visitSuffix ? (
                 <>
-                  {visualRowSpan > 1 && !displayData.noteSuffix ? <br /> : null}
+                  {visualRowSpan > 1 && isVisitOnLowerRow && !displayData.noteSuffix ? <br /> : null}
                   {renderSchedulerVisitSuffix(displayData.visitSuffix, visitSuffixClassName, visitSuffixColor ? { color: visitSuffixColor } : undefined)}
                 </>
               ) : null}
