@@ -1014,9 +1014,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     selectedCell,
     editingCell,
     rowHeight,
-    intervalMinutes: settings?.interval_minutes,
-    weeks,
-    getTimeSlotsForDay,
+    baseTimeSlots,
     shouldHideCompactTimeLabel,
     viewRef,
   });

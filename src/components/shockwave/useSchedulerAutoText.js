@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { generateShockwaveCalendar } from '../../lib/calendarUtils';
 import { incrementSessionCount, normalizeNameForMatch } from '../../lib/memoParser';
 import { supabase } from '../../lib/supabaseClient';
+import { getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import {
   get4060PrescriptionFromContent,
   has4060Pattern,
@@ -130,7 +131,6 @@ export default function useSchedulerAutoText({
       if (options.exclude4060 && has4060Pattern(memo.content)) return;
 
       const memoList = getMemoListFromMergeSpan(memo.merge_span);
-      if (memoList.length === 0) return;
 
       if (!latestMatch || sortKey > latestMatch.sortKey) {
         latestMatch = {
@@ -752,8 +752,7 @@ export default function useSchedulerAutoText({
     const inheritedMergeSpan = findLatestSchedulerMemoMeta(
       { w, d, r, c },
       selected.chartNumber,
-      selected.cleanName,
-      { exclude4060: userRemovedDoseTag }
+      selected.cleanName
     );
     const needsDialog = (selected.bodyParts.length >= 2 && !selected.preferredBodyPart) || selected.prescriptions.length >= 2;
     if (needsDialog) {
@@ -761,11 +760,21 @@ export default function useSchedulerAutoText({
         const defaultBodyPart = selected.preferredBodyPart || selected.bodyParts[0] || selected.latestBodyPart || '';
         const defaultPrescription = autoPrescription || selected.prescription || selected.prescriptions[0] || '';
         const baseMerge = buildMergeSpanWithMemoList(inheritedMergeSpan, getMemoListFromMergeSpan(inheritedMergeSpan));
+        const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
+        if (defaultPrescription) {
+          const targetRowSpan = getManualTherapyRowSpan(defaultPrescription, {
+            intervalMinutes: settings?.interval_minutes,
+            durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+          });
+          if (targetRowSpan > 1) {
+            finalMergeSpan.rowSpan = targetRowSpan;
+          }
+        }
         return {
           text: normalizeSchedulerVisitSuffix(`${selected.chartNumber}/${selected.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${effectiveVisitCount})`}`),
           prescription: defaultPrescription,
           bodyPart: searchChart ? (defaultBodyPart || '') : defaultBodyPart,
-          mergeSpan: buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts),
+          mergeSpan: finalMergeSpan,
         };
       }
       try {
@@ -787,11 +796,22 @@ export default function useSchedulerAutoText({
 
         if (!dialogResult) return { text: rawName };
 
+        const finalMergeSpan = buildMergeSpanWithMemoList(inheritedMergeSpan, dialogResult.memoList);
+        if (dialogResult.prescription) {
+          const targetRowSpan = getManualTherapyRowSpan(dialogResult.prescription, {
+            intervalMinutes: settings?.interval_minutes,
+            durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+          });
+          if (targetRowSpan > 1) {
+            finalMergeSpan.rowSpan = targetRowSpan;
+          }
+        }
+
         return {
           text: normalizeSchedulerVisitSuffix(`${dialogResult.chartNumber}/${dialogResult.namePart}${explicitVisitSuffix || explicitNoteSuffix || `(${dialogResult.visitCount})`}`),
           prescription: dialogResult.prescription,
           bodyPart: searchChart ? (dialogResult.bodyPart || '') : dialogResult.bodyPart,
-          mergeSpan: buildMergeSpanWithMemoList(inheritedMergeSpan, dialogResult.memoList),
+          mergeSpan: finalMergeSpan,
         };
       } catch (err) {
         console.error('autoFillDialog error:', err);
@@ -800,6 +820,16 @@ export default function useSchedulerAutoText({
 
     const baseMerge = searchChart ? (selected.mergeSpan || clearPatientMergeSpan()) : selected.mergeSpan;
     const finalMergeSpan = buildMergeSpanWithBodyPartOptions(baseMerge, selected.bodyParts);
+
+    if (autoPrescription) {
+      const targetRowSpan = getManualTherapyRowSpan(autoPrescription, {
+        intervalMinutes: settings?.interval_minutes,
+        durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+      });
+      if (targetRowSpan > 1) {
+        finalMergeSpan.rowSpan = targetRowSpan;
+      }
+    }
 
     return {
       text: autoText,

@@ -915,20 +915,23 @@
 
 /* 셀 호버/선택/편집 시 해당 행의 시간 셀 하이라이트 */
 .sw-time-label.active-row {
-  background-color: #bae6fd;
-  box-shadow: inset 0 0 0 1px #38bdf8;
+  background-color: #bae6fd !important;
+  box-shadow: inset 0 0 0 1px #38bdf8 !important;
+  color: #075985 !important;
+  z-index: 5;
   transition: background-color 0.15s ease;
 }
 
 .sw-time-label.active-row[data-active-time-label] > span {
-  display: none;
+  display: none !important;
 }
 
 .sw-time-label.active-row[data-active-time-label]::after {
-  display: inline-block;
-  color: #075985;
-  font-size: clamp(13px, calc(var(--sw-row-height) * 1.05), 15px);
-  font-weight: 900;
+  content: attr(data-active-time-label) !important;
+  display: inline-block !important;
+  color: #075985 !important;
+  font-size: clamp(13px, calc(var(--sw-row-height) * 1.05), 15px) !important;
+  font-weight: 900 !important;
 }
 
 .sw-time-label--compact-hover-label.active-row > span {
