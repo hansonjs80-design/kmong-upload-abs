@@ -1039,7 +1039,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
     if (activeWeek !== null && activeRow !== null) {
       const targetDay = activeDay !== null && activeDay !== undefined ? activeDay : 0;
-      const dayInfo = weeks?.[activeWeek]?.days?.[targetDay];
+      const dayInfo = weeks?.[activeWeek]?.[targetDay];
       const daySlots = dayInfo ? getTimeSlotsForDay(dayInfo) : [];
 
       if (daySlots.length > 0) {

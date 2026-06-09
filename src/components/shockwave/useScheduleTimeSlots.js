@@ -117,7 +117,7 @@ export default function useScheduleTimeSlots({
   }, [currentYear, currentMonth, holidays]);
 
   const getDefaultReservationTime = useCallback((w, d, r) => {
-    const dayInfo = weeks?.[w]?.days?.[d];
+    const dayInfo = weeks?.[w]?.[d];
     const slot = dayInfo ? getTimeSlotsForDay(dayInfo).find((item) => item.idx === r) : null;
     const slotTime = slot?.time || slot?.label || baseTimeSlots?.[r]?.time || baseTimeSlots?.[r]?.label || '';
     if (slotTime) return slotTime;
