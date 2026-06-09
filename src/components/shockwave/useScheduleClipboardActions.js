@@ -54,6 +54,62 @@ export default function useScheduleClipboardActions({
     };
   }, [cellKey, currentMonth, currentYear, memos]);
 
+  const expandMergedPastePayload = useCallback((items) => {
+    const payloadByKey = new Map();
+    (items || []).forEach((item) => {
+      const key = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      payloadByKey.set(key, item);
+    });
+
+    (items || []).forEach((item) => {
+      const mergeSpan = item.merge_span || {};
+      const rowSpan = Math.max(1, Number(mergeSpan.rowSpan) || 1);
+      const colSpan = Math.max(1, Number(mergeSpan.colSpan) || 1);
+      if (mergeSpan.mergedInto || (rowSpan <= 1 && colSpan <= 1)) return;
+
+      const masterKey = `${item.week_index}-${item.day_index}-${item.row_index}-${item.col_index}`;
+      for (let rowOffset = 0; rowOffset < rowSpan; rowOffset += 1) {
+        for (let colOffset = 0; colOffset < colSpan; colOffset += 1) {
+          if (rowOffset === 0 && colOffset === 0) continue;
+          const rowIndex = item.row_index + rowOffset;
+          const colIndex = item.col_index + colOffset;
+          if (rowIndex >= baseTimeSlotsLength || colIndex >= colCount) continue;
+          const childKey = `${item.week_index}-${item.day_index}-${rowIndex}-${colIndex}`;
+          if (payloadByKey.has(childKey)) continue;
+          payloadByKey.set(childKey, {
+            ...item,
+            row_index: rowIndex,
+            col_index: colIndex,
+            content: '',
+            bg_color: null,
+            merge_span: { rowSpan: 1, colSpan: 1, mergedInto: masterKey },
+            prescription: '',
+            body_part: '',
+          });
+        }
+      }
+    });
+
+    return Array.from(payloadByKey.values());
+  }, [baseTimeSlotsLength, colCount]);
+
+  const keepSourceMergeWhenAutoTextDoesNotMerge = useCallback((autoMergeSpan, sourceMergeSpan) => {
+    const sourceSpan = sourceMergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const autoSpan = autoMergeSpan || { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const sourceIsMerged = (
+      sourceSpan?.mergedInto ||
+      Number(sourceSpan?.rowSpan || 1) > 1 ||
+      Number(sourceSpan?.colSpan || 1) > 1
+    );
+    const autoIsMerged = (
+      autoSpan?.mergedInto ||
+      Number(autoSpan?.rowSpan || 1) > 1 ||
+      Number(autoSpan?.colSpan || 1) > 1
+    );
+
+    return sourceIsMerged && !autoIsMerged ? sourceSpan : autoSpan;
+  }, []);
+
   const buildClipboardSelection = useCallback(() => {
     if (!selectedCell) return null;
 
@@ -510,7 +566,7 @@ export default function useScheduleClipboardActions({
 
     const isInternalClipboard = clip.sourceKeys && clip.sourceKeys.length > 0;
 
-    const enhancedPayload = await Promise.all(targetPayload.map(async (item) => {
+    const enhancedPayloadBase = await Promise.all(targetPayload.map(async (item) => {
       const isMergedChild = item.merge_span?.mergedInto !== null && item.merge_span?.mergedInto !== undefined;
       if (!isMergedChild && item.content && (!item.prescription || !item.body_part)) {
         // 외부 클립보드에서 온 데이터인 경우, 기존 회차 접미사를 제거하고 전달하여
@@ -558,11 +614,14 @@ export default function useScheduleClipboardActions({
           content: finalContent,
           prescription: item.prescription || result.prescription,
           body_part: item.body_part || result.bodyPart,
-          merge_span: stripReservationTimeFromMergeSpan(result.mergeSpan || item.merge_span),
+          merge_span: stripReservationTimeFromMergeSpan(
+            keepSourceMergeWhenAutoTextDoesNotMerge(result.mergeSpan, item.merge_span)
+          ),
         };
       }
       return item;
     }));
+    const enhancedPayload = expandMergedPastePayload(enhancedPayloadBase);
 
     // 붙여넣기 결과를 가상 맵에 빌드하여 도수치료 연쇄 자동 병합의 입력 소스로 사용
     const activeMemos = { ...memos };
@@ -759,6 +818,8 @@ export default function useScheduleClipboardActions({
     buildMemoSnapshot,
     parsePlainTextClipboard,
     buildPastePayload,
+    expandMergedPastePayload,
+    keepSourceMergeWhenAutoTextDoesNotMerge,
     buildSchedulerAutoText,
     addToast,
     cellKey,
