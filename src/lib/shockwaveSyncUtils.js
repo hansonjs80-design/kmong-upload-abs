@@ -232,6 +232,26 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
     const parsed = parseTherapyInfo(cell?.content);
     if (!parsed) return;
 
+    if (!parsed.visit_count) {
+      const rowSpan = cell?.merge_span?.rowSpan || 1;
+      const mergedInto = cell?.merge_span?.mergedInto;
+      if (rowSpan > 1 && !mergedInto) {
+        const lastChildKey = `${w}-${d}-${r + rowSpan - 1}-${c}`;
+        const lastChildCell = memos[lastChildKey];
+        const lastChildContent = String(lastChildCell?.content || '').trim();
+        if (lastChildContent) {
+          const childVisitMatch = lastChildContent.match(/^\((\d+)₩?\)$/);
+          if (childVisitMatch) {
+            parsed.visit_count = childVisitMatch[1];
+          } else if (lastChildContent === '*') {
+            parsed.visit_count = '1';
+          } else if (lastChildContent === '(-)') {
+            parsed.visit_count = '-';
+          }
+        }
+      }
+    }
+
     const therapistName = resolveTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     newLogs.push({
       r,

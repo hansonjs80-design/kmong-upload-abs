@@ -181,6 +181,26 @@ async function runTodayManualTherapyScheduleToStatsSync({
     const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
     if (!parsed) return;
 
+    if (!parsed.visitCount) {
+      const rowSpan = cell?.merge_span?.rowSpan || 1;
+      const mergedInto = cell?.merge_span?.mergedInto;
+      if (rowSpan > 1 && !mergedInto) {
+        const lastChildKey = `${w}-${d}-${r + rowSpan - 1}-${c}`;
+        const lastChildCell = memos[lastChildKey];
+        const lastChildContent = String(lastChildCell?.content || '').trim();
+        if (lastChildContent) {
+          const childVisitMatch = lastChildContent.match(/^\((\d+)₩?\)$/);
+          if (childVisitMatch) {
+            parsed.visitCount = childVisitMatch[1];
+          } else if (lastChildContent === '*') {
+            parsed.visitCount = '1';
+          } else if (lastChildContent === '(-)') {
+            parsed.visitCount = '-';
+          }
+        }
+      }
+    }
+
     newLogs.push({
       r,
       c,
