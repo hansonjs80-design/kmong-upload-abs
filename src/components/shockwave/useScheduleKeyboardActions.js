@@ -821,6 +821,7 @@ export default function useScheduleKeyboardActions({
 
       if (displayUpdates.length > 0) {
         applyCellDisplayRef.current?.(displayUpdates);
+        applyPayloadToLatestRefs(displayUpdates);
       }
 
       if (visitDebounceRef.current.timer) clearTimeout(visitDebounceRef.current.timer);

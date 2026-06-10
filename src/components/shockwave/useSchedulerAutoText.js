@@ -11,6 +11,7 @@ import {
 } from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
+  applyVisitCountToSchedulerContent,
   buildManualNamePart,
   buildMergeSpanWithBodyPartOptions,
   buildMergeSpanWithMemoList,
@@ -240,22 +241,43 @@ export default function useSchedulerAutoText({
         const latestDate = candidate.latestSortKey.slice(0, 10);
         const isSameDay = targetDate && latestDate === targetDate;
         const isHyphen = candidate.latestParsed?.suffixValue === '-';
-        const nextText = (isHyphen || isSameDay) ? latestContent : (incrementSessionCount(latestContent) || latestContent);
-        const incrementedParsed = parseSchedulerPatientText(nextText);
         const latestParsed = candidate.latestParsed;
         const latestMergeSpan = buildMergeSpanWithMemoList(
           candidate.latestMemo?.merge_span,
           getMemoListFromMergeSpan(candidate.latestMemo?.merge_span)
         );
-        const lastVisit = parseInt(latestParsed?.suffixValue || '0', 10) || (latestParsed?.suffixToken === '*' ? 1 : 0);
+        const rawSuffixValue = latestParsed?.suffixValue || '';
+        const parsedSuffixVal = parseInt(rawSuffixValue, 10);
+        const lastVisit = !isNaN(parsedSuffixVal) ? parsedSuffixVal : (latestParsed?.suffixToken === '*' ? 1 : 0);
+        const isPriorVisitNewPatient = latestParsed?.suffixToken === '*';
+
+        const currentCellMemo = memos[targetMemoKey] || {};
+        const currentCellBodyPart = String(currentCellMemo.body_part || '').trim();
+        const currentCellPrescription = String(currentCellMemo.prescription || '').trim();
+
         let nextVisit;
         if (isHyphen) {
           nextVisit = '-';
         } else if (isSameDay) {
           nextVisit = latestParsed?.suffixValue || (latestParsed?.suffixToken === '*' ? '*' : (lastVisit > 0 ? lastVisit : 1));
         } else {
-          nextVisit = parseInt(incrementedParsed?.suffixValue || '0', 10) || (lastVisit > 0 ? lastVisit + 1 : 1);
+          const hasDifferentBodyPart = currentCellBodyPart && 
+            !splitBodyParts(currentCellBodyPart).some(part => candidate.bodyPartsMap.has(normalizeBodyPartKey(part)));
+          const hasDifferentPrescription = currentCellPrescription && 
+            !candidate.prescriptions.has(currentCellPrescription);
+
+          if (!isPriorVisitNewPatient && (hasDifferentBodyPart || hasDifferentPrescription)) {
+            nextVisit = 1;
+          } else {
+            nextVisit = lastVisit > 0 ? lastVisit + 1 : 1;
+          }
         }
+
+        let nextText = latestContent;
+        if (!isHyphen && !isSameDay) {
+          nextText = applyVisitCountToSchedulerContent(latestContent, nextVisit);
+        }
+        const incrementedParsed = parseSchedulerPatientText(nextText);
 
         const effectiveLatestBodyPart = String(candidate.latestMemo?.body_part || '').trim()
           || candidate.latestNonEmptyBodyPart
@@ -670,13 +692,28 @@ export default function useSchedulerAutoText({
       const isSameDay = targetDate && item.date === targetDate;
       const lastVisit = rawVisit === '*' ? 1 : (parseInt(rawVisit, 10) || 0);
       
+      const isPriorVisitNewPatient = rawVisit === '*';
+      
       let nextVisit;
       if (isHyphen) {
         nextVisit = '-';
       } else if (isSameDay) {
         nextVisit = rawVisit || 1;
       } else {
-        nextVisit = lastVisit > 0 ? lastVisit + 1 : 1;
+        const currentCellMemo = memos[memoKey] || {};
+        const currentCellBodyPart = String(currentCellMemo.body_part || '').trim();
+        const currentCellPrescription = String(currentCellMemo.prescription || '').trim();
+
+        const hasDifferentBodyPart = currentCellBodyPart && 
+          !splitBodyParts(currentCellBodyPart).some(part => candidate.bodyPartsMap.has(normalizeBodyPartKey(part)));
+        const hasDifferentPrescription = currentCellPrescription && 
+          !candidate.prescriptions.has(currentCellPrescription);
+
+        if (!isPriorVisitNewPatient && (hasDifferentBodyPart || hasDifferentPrescription)) {
+          nextVisit = 1;
+        } else {
+          nextVisit = lastVisit > 0 ? lastVisit + 1 : 1;
+        }
       }
 
       if (!forceOverrideSession && manualSession !== null) {
