@@ -16,6 +16,7 @@ import {
   normalizeReservationTimeValue,
   normalizeVisitInputValue,
   splitBodyParts,
+  getExplicitVisitSuffix,
 } from '../../lib/schedulerUtils';
 
 export default function useScheduleContextMenuActions({
@@ -181,22 +182,47 @@ export default function useScheduleContextMenuActions({
         const memo = getMemoForAction(key);
         let updatedContent = getStableMemoContent(key, memo);
         const prescriptionValue = action.value || '';
-        const doseNumber = prescriptionValue.match(/^(40|60)분$/)?.[1];
+
+        // 1. 기존 병합의 자식 셀 혹은 현재 마스터 셀에 존재하던 회차 수집
+        const currentSpan = pendingMergeSpans?.[key] || memo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
+        let existingVisit = '';
+        if (currentSpan.rowSpan > 1 && !currentSpan.mergedInto) {
+          const lastChildKey = `${w}-${d}-${r + currentSpan.rowSpan - 1}-${c}`;
+          const lastChildMemo = memos[lastChildKey];
+          const lastChildContent = String(lastChildMemo?.content || '').trim();
+          if (lastChildContent && (lastChildContent.startsWith('(') || lastChildContent === '*')) {
+            existingVisit = lastChildContent;
+          }
+        }
+
+        const selfVisit = getExplicitVisitSuffix(updatedContent);
+        const finalVisitSuffix = selfVisit || existingVisit;
+
+        // 2. 새 처방명에 맞는 셀 태그(doseNumber) 분석
+        const customDoseTag = treatmentMergeOptions?.doseTagsByPrescription?.[prescriptionValue];
+        let doseNumber = customDoseTag !== undefined ? customDoseTag : '';
+        if (!doseNumber && prescriptionValue) {
+          const matched = prescriptionValue.match(/(\d{2,3})/);
+          if (matched) {
+            doseNumber = matched[1];
+          }
+        }
+
+        // 3. 기존 content에서 40/60 패턴 및 회차 패턴 제거 후 재생성
+        let baseText = updatedContent;
+        if (selfVisit) {
+          baseText = baseText.slice(0, baseText.length - selfVisit.length).trim();
+        }
+        baseText = strip4060FromContent(baseText);
 
         if (doseNumber) {
-          updatedContent = strip4060FromContent(updatedContent);
-          const parenMatch = updatedContent.match(/^(.+?)(\(\d+\).*)$/);
-          if (parenMatch) {
-            updatedContent = `${parenMatch[1]}${doseNumber}${parenMatch[2]}`;
-          } else if (updatedContent && !/\(\d+\)/.test(updatedContent)) {
-            updatedContent = `${updatedContent}${doseNumber}`;
-          }
-          updatedContent = normalize4060StarOrder(updatedContent);
-        } else if (action.value && has4060Pattern(updatedContent)) {
-          updatedContent = strip4060FromContent(updatedContent);
-        } else if (!action.value) {
-          updatedContent = strip4060FromContent(updatedContent);
+          baseText = `${baseText}${doseNumber}`;
         }
+        if (finalVisitSuffix) {
+          baseText = `${baseText}${finalVisitSuffix}`;
+        }
+        updatedContent = normalize4060StarOrder(baseText);
+
         if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
           updateContextMemoSnapshot(key, memo, {
             content: updatedContent,

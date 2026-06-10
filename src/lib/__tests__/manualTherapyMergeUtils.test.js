@@ -173,3 +173,20 @@ test('buildManualTherapyUnmergePayload clears a manual therapy merge when changi
   assert.equal(result.payload[1].merge_span.meta.intentional_clear, true);
   assert.equal(result.payload[2].merge_span.meta.intentional_clear, true);
 });
+
+test('buildManualTherapyMergePayload splits visit to the last child row if visitOnLowerRowByPrescription is true', () => {
+  const result = buildManualTherapyMergePayload({
+    ...baseArgs,
+    key: '0-1-4-2',
+    memos: {},
+    content: '1234/홍길동40(2)',
+    prescription: '40분',
+    bodyPart: 'Lumbar',
+    visitOnLowerRowByPrescription: { '40분': true },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.payload.length, 2);
+  assert.equal(result.payload[0].content, '1234/홍길동40'); // 회차 (2) 제거됨
+  assert.equal(result.payload[1].content, '(2)'); // 마지막 자식 셀에 회차 단독 입력됨
+});

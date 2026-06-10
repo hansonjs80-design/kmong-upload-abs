@@ -69,6 +69,7 @@ import {
   buildSchedulerMemoSortKey,
   getNonVisitParentheticalSuffix,
   addBodyPartToMap,
+  getExplicitVisitSuffix,
 } from '../../lib/schedulerUtils';
 
 const PATIENT_HISTORY_GROUPS = [
@@ -1044,11 +1045,17 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     ...(manualTherapyMergeSettings?.visit_on_lower_row || {}),
   }), [shockwaveMergeSettings?.visit_on_lower_row, manualTherapyMergeSettings?.visit_on_lower_row]);
 
+  const doseTagsByPrescription = useMemo(() => ({
+    ...(shockwaveMergeSettings?.dose_tags || {}),
+    ...(manualTherapyMergeSettings?.dose_tags || {}),
+  }), [shockwaveMergeSettings?.dose_tags, manualTherapyMergeSettings?.dose_tags]);
+
   const treatmentMergeOptions = useMemo(() => ({
     intervalMinutes: settings?.interval_minutes,
     durationMinutesByPrescription: treatmentDurationMinutesByPrescription,
     visitOnLowerRowByPrescription,
-  }), [settings?.interval_minutes, treatmentDurationMinutesByPrescription, visitOnLowerRowByPrescription]);
+    doseTagsByPrescription,
+  }), [settings?.interval_minutes, treatmentDurationMinutesByPrescription, visitOnLowerRowByPrescription, doseTagsByPrescription]);
 
   const { buildSchedulerAutoText } = useSchedulerAutoText({
     memos,
@@ -1100,8 +1107,49 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         (mergeSpan.rowSpan || 1) === expectedRowSpan &&
         (mergeSpan.colSpan || 1) === 1
       );
-      if (existingPrescription === autoPres && hasExpectedMerge) return;
-      fixEntries.push({ key, prescription: autoPres, content });
+
+      // 자식 셀에 회차가 분리되어 있었는지 수집
+      let existingVisit = '';
+      if (mergeSpan.rowSpan > 1 && !mergeSpan.mergedInto) {
+        const lastChildKey = `${key.split('-')[0]}-${key.split('-')[1]}-${Number(key.split('-')[2]) + mergeSpan.rowSpan - 1}-${key.split('-')[3]}`;
+        const lastChildMemo = memos[lastChildKey];
+        const lastChildContent = String(lastChildMemo?.content || '').trim();
+        if (lastChildContent && (lastChildContent.startsWith('(') || lastChildContent === '*')) {
+          existingVisit = lastChildContent;
+        }
+      }
+
+      const selfVisit = getExplicitVisitSuffix(content);
+      const finalVisitSuffix = selfVisit || existingVisit;
+
+      // 회차 분리 설정 상태와 데이터 상태가 일치하는지 검증
+      const shouldSplitVisit = !!visitOnLowerRowByPrescription[autoPres];
+      let isVisitSplitMatch = true;
+      if (expectedRowSpan > 1) {
+        if (shouldSplitVisit) {
+          if (selfVisit || !existingVisit) {
+            isVisitSplitMatch = false;
+          }
+        } else {
+          if (!selfVisit && existingVisit) {
+            isVisitSplitMatch = false;
+          }
+        }
+      }
+
+      if (existingPrescription === autoPres && hasExpectedMerge && isVisitSplitMatch) return;
+
+      // 보정 시에는 회차가 포함된 최종 합산된 콘텐츠를 구성하여 전달
+      let baseText = content;
+      if (selfVisit) {
+        baseText = baseText.slice(0, baseText.length - selfVisit.length).trim();
+      }
+      if (finalVisitSuffix) {
+        baseText = `${baseText}${finalVisitSuffix}`;
+      }
+      const combinedContent = normalize4060StarOrder(baseText);
+
+      fixEntries.push({ key, prescription: autoPres, content: combinedContent });
     });
 
     const blankCleanupPayload = buildBlankScheduleCleanupPayload({
