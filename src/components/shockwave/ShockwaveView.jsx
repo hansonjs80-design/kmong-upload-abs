@@ -78,6 +78,8 @@ const PATIENT_HISTORY_GROUPS = [
 
 const MOBILE_DOUBLE_TAP_MS = 320;
 const MOBILE_LONG_PRESS_MS = 520;
+/** 롱프레스로 컨텍스트 메뉴가 열린 직후 합성 mousedown 이벤트를 무시하기 위한 타임스탬프 가드 */
+let _longPressContextMenuGuardTs = 0;
 const COMPACT_TIME_LABEL_ROW_HEIGHT = 18;
 const COMPACT_EDITING_INPUT_ROW_HEIGHT = 10;
 
@@ -496,6 +498,7 @@ const MemoizedCell = memo(({
     clearLongPressTimer();
     longPressTimerRef.current = window.setTimeout(() => {
       longPressTriggeredRef.current = true;
+      _longPressContextMenuGuardTs = Date.now();
       openCellContextMenu({
         preventDefault: () => {},
         stopPropagation: () => {},
@@ -1166,12 +1169,19 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (contextMenu && !isContextMenuTarget(e.target)) {
+      if (!contextMenu) return;
+      // 롱프레스 직후 합성 mousedown 이벤트 무시 (500ms 가드)
+      if (e.type === 'mousedown' && Date.now() - _longPressContextMenuGuardTs < 500) return;
+      if (!isContextMenuTarget(e.target)) {
         setContextMenu(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [contextMenu, isContextMenuTarget]);
 
   const {
@@ -1326,7 +1336,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     if (e?.button !== 0) return;
     e.preventDefault();
 
-    setContextMenu(null);
+    // 롱프레스 직후 합성 mousedown에 의한 메뉴 닫힘 방지
+    if (Date.now() - _longPressContextMenuGuardTs >= 500) {
+      setContextMenu(null);
+    }
 
     if (editingCell) {
       const [editW, editD, editR, editC] = editingCell.split('-').map(Number);
