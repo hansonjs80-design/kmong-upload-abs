@@ -356,18 +356,18 @@
   display: grid;
   border-bottom: 1px solid #000;
   overflow: visible;
-  height: var(--sw-therapist-row-height, 29px);
+  height: var(--sw-therapist-row-height, 22px);
 }
 
 .sw-therapist-header.cols-2 { grid-template-columns: 1fr 1fr; }
 .sw-therapist-header.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
 
 .sw-therapist-name {
-  padding: 1px 3px;
+  padding: 0px 3px;
   text-align: center;
   font-size: var(--sw-therapist-font-size, 14px);
   font-weight: var(--sw-therapist-font-weight, 700);
-  line-height: 1.43;
+  line-height: 1;
   color: #000;
   border-right: 1px solid #b7b7b7;
   background: var(--bg-secondary);
