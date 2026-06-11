@@ -11,7 +11,7 @@ import {
 const MIN_SCHEDULE_ROW_HEIGHT = 5;
 const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_SCHEDULE_DAY_WIDTH_MOBILE = 70;
-const MIN_FOCUSED_DAY_WIDTH = 138;
+const MIN_FOCUSED_DAY_WIDTH = 97;
 const MIN_COL_RATIO = 0.2;
 const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
 const FOCUSED_DAY_COL_WIDTH_KEY = 'clinic-schedule-focused-day-col-width';

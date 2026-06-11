@@ -284,6 +284,11 @@
   height: var(--sw-header-row-height, 32px);
 }
 
+.shockwave-day:not(:last-child) .sw-day-header-row,
+.shockwave-day:not(:last-child) .sw-therapist-header {
+  box-shadow: inset -2px 0 0 #000;
+}
+
 .sw-week-header-cell,
 .sw-day-header-cell {
   padding: 0;

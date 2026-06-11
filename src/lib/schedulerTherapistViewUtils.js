@@ -23,9 +23,9 @@ export function getTherapistGridTemplate(isSingleFocused, fallbackTemplate) {
 }
 
 export function getFocusedDayColumnWidth(dayColWidth, colCount, isSingleFocused, focusedDayColWidth = 0) {
-  if (!dayColWidth) return null;
   if (!isSingleFocused) return dayColWidth;
-  if (focusedDayColWidth) return Math.max(138, Number(focusedDayColWidth) || 0);
+  if (focusedDayColWidth) return Math.max(97, Number(focusedDayColWidth) || 0);
+  if (!dayColWidth) return null;
   return Math.max(160, Math.round(dayColWidth / Math.max(1, colCount) + 34));
 }
 
