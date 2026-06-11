@@ -2384,7 +2384,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   return (
     <>
       <div 
-        className={`shockwave-view animate-fade-in${isScheduleMonthLoading ? ' is-month-loading' : ''}`}
+        className={`shockwave-view animate-fade-in${isScheduleMonthLoading ? ' is-month-loading' : ''}${isSingleTherapistFocused ? ' is-single-therapist-focused' : ''}`}
         ref={viewRef} 
         tabIndex={0} 
         style={{

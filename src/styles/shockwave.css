@@ -289,6 +289,15 @@
   box-shadow: inset -2px 0 0 #000;
 }
 
+.shockwave-view.is-single-therapist-focused .sw-cell {
+  overflow: hidden;
+}
+
+.shockwave-view.is-single-therapist-focused .sw-cell-display,
+.shockwave-view.is-single-therapist-focused .sw-cell-main {
+  max-width: 100%;
+}
+
 .sw-week-header-cell,
 .sw-day-header-cell {
   padding: 0;

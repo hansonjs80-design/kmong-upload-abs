@@ -19,7 +19,7 @@ export function isSingleTherapistFocus(visibleTherapistSlots, colCount) {
 }
 
 export function getTherapistGridTemplate(isSingleFocused, fallbackTemplate) {
-  return isSingleFocused ? 'minmax(138px, 1fr)' : fallbackTemplate;
+  return isSingleFocused ? 'minmax(0, 1fr)' : fallbackTemplate;
 }
 
 export function getFocusedDayColumnWidth(dayColWidth, colCount, isSingleFocused, focusedDayColWidth = 0) {
