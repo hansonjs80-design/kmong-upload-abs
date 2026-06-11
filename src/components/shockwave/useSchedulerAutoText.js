@@ -32,8 +32,14 @@ export default function useSchedulerAutoText({
   memos,
   weeks,
   settings,
+  manualTherapySettings,
   setChartSelector,
 }) {
+  const manualTherapyPrescriptions = Array.isArray(manualTherapySettings?.prescriptions)
+    ? manualTherapySettings.prescriptions
+    : (Array.isArray(settings?.manual_therapy_prescriptions) ? settings.manual_therapy_prescriptions : []);
+  const manualTherapyDurationMinutes = manualTherapySettings?.duration_minutes || settings?.manual_therapy_duration_minutes || {};
+
   const shouldAutoFormatSchedulerName = useCallback((value) => {
     const text = String(value || '').trim();
     if (!text) return false;
@@ -379,7 +385,7 @@ export default function useSchedulerAutoText({
         if (initialPrescription) {
           const targetRowSpan = getManualTherapyRowSpan(initialPrescription, {
             intervalMinutes: settings?.interval_minutes,
-            durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+            durationMinutesByPrescription: manualTherapyDurationMinutes,
           });
           if (targetRowSpan > 1) {
             finalMergeSpan.rowSpan = targetRowSpan;
@@ -403,7 +409,7 @@ export default function useSchedulerAutoText({
       if (autoPrescription) {
         const targetRowSpan = getManualTherapyRowSpan(autoPrescription, {
           intervalMinutes: settings?.interval_minutes,
-          durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+          durationMinutesByPrescription: manualTherapyDurationMinutes,
         });
         if (targetRowSpan > 1) {
           finalMergeSpan.rowSpan = targetRowSpan;
@@ -419,7 +425,7 @@ export default function useSchedulerAutoText({
     };
 
     const manualPrescriptionSet = new Set(
-      (Array.isArray(settings?.manual_therapy_prescriptions) ? settings.manual_therapy_prescriptions : [])
+      manualTherapyPrescriptions
         .map((prescription) => String(prescription || '').trim())
         .filter(Boolean)
     );
@@ -822,7 +828,7 @@ export default function useSchedulerAutoText({
         if (defaultPrescription) {
           const targetRowSpan = getManualTherapyRowSpan(defaultPrescription, {
             intervalMinutes: settings?.interval_minutes,
-            durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+            durationMinutesByPrescription: manualTherapyDurationMinutes,
           });
           if (targetRowSpan > 1) {
             finalMergeSpan.rowSpan = targetRowSpan;
@@ -858,7 +864,7 @@ export default function useSchedulerAutoText({
         if (dialogResult.prescription) {
           const targetRowSpan = getManualTherapyRowSpan(dialogResult.prescription, {
             intervalMinutes: settings?.interval_minutes,
-            durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+            durationMinutesByPrescription: manualTherapyDurationMinutes,
           });
           if (targetRowSpan > 1) {
             finalMergeSpan.rowSpan = targetRowSpan;
@@ -882,7 +888,7 @@ export default function useSchedulerAutoText({
     if (autoPrescription) {
       const targetRowSpan = getManualTherapyRowSpan(autoPrescription, {
         intervalMinutes: settings?.interval_minutes,
-        durationMinutesByPrescription: settings?.manual_therapy_duration_minutes || {},
+        durationMinutesByPrescription: manualTherapyDurationMinutes,
       });
       if (targetRowSpan > 1) {
         finalMergeSpan.rowSpan = targetRowSpan;
@@ -902,6 +908,8 @@ export default function useSchedulerAutoText({
     shouldAutoFormatSchedulerName,
     weeks,
     settings,
+    manualTherapyDurationMinutes,
+    manualTherapyPrescriptions,
     findLatestSchedulerMemoMeta,
     findSchedulerHistoryCandidates,
     markUnknownPatient,

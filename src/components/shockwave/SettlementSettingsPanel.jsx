@@ -9,19 +9,27 @@ export default function SettlementSettingsPanel({
   month,
   settings,
   effectiveSettings,
+  therapistOptions = [],
   onSave,
 }) {
   const isManualTherapy = type === 'manual_therapy';
+
+  const getBaseDoseTags = () => (
+    effectiveSettings?.dose_tags
+    || (isManualTherapy ? settings?.manual_therapy_dose_tags : settings?.shockwave_dose_tags)
+    || {}
+  );
 
   const [draft, setDraft] = useState(() => ({
     prescriptions: effectiveSettings?.prescriptions || [],
     prescription_prices: effectiveSettings?.prescription_prices || {},
     prescription_colors: effectiveSettings?.prescription_colors || settings?.prescription_colors || {},
     incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
-    dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
+    dose_tags: getBaseDoseTags(),
     shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
     duration_minutes: effectiveSettings?.duration_minutes || {},
     visit_on_lower_row: (isManualTherapy ? settings?.manual_therapy_visit_on_lower_row : settings?.visit_on_lower_row) || {},
+    therapist_names: effectiveSettings?.therapist_names || [],
   }));
 
   const title = isManualTherapy ? '도수치료 결산 설정' : '충격파 결산 설정';
@@ -38,12 +46,63 @@ export default function SettlementSettingsPanel({
       prescription_prices: effectiveSettings?.prescription_prices || {},
       prescription_colors: effectiveSettings?.prescription_colors || settings?.prescription_colors || {},
       incentive_percentage: effectiveSettings?.incentive_percentage ?? 0,
-      dose_tags: effectiveSettings?.dose_tags || settings?.manual_therapy_dose_tags || {},
+      dose_tags: getBaseDoseTags(),
       shortcuts: effectiveSettings?.shortcuts || (isManualTherapy ? settings?.manual_therapy_shortcuts : settings?.shortcuts) || {},
       duration_minutes: effectiveSettings?.duration_minutes || {},
       visit_on_lower_row: (isManualTherapy ? settings?.manual_therapy_visit_on_lower_row : settings?.visit_on_lower_row) || {},
+      therapist_names: effectiveSettings?.therapist_names || [],
     });
-  }, [effectiveSettings, settings?.prescription_colors, settings?.manual_therapy_dose_tags, settings?.shortcuts, settings?.manual_therapy_shortcuts, settings?.visit_on_lower_row, settings?.manual_therapy_visit_on_lower_row, isManualTherapy]);
+  }, [effectiveSettings, settings?.prescription_colors, settings?.manual_therapy_dose_tags, settings?.shockwave_dose_tags, settings?.shortcuts, settings?.manual_therapy_shortcuts, settings?.visit_on_lower_row, settings?.manual_therapy_visit_on_lower_row, isManualTherapy]);
+
+  const normalizedTherapistOptions = useMemo(() => {
+    const seen = new Set();
+    return (Array.isArray(therapistOptions) ? therapistOptions : [])
+      .map((item) => String(item?.name || item || '').trim())
+      .filter((name) => {
+        if (!name || seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      });
+  }, [therapistOptions]);
+
+  const effectiveSelectedTherapistNames = useMemo(() => {
+    const configured = Array.isArray(draft.therapist_names)
+      ? draft.therapist_names.map((name) => String(name || '').trim()).filter(Boolean)
+      : [];
+    if (configured.length > 0) return configured;
+    return normalizedTherapistOptions;
+  }, [draft.therapist_names, normalizedTherapistOptions]);
+
+  const selectedTherapistSet = useMemo(
+    () => new Set(effectiveSelectedTherapistNames),
+    [effectiveSelectedTherapistNames]
+  );
+
+  const toggleTherapistName = (name) => {
+    setDraft((prev) => {
+      const current = Array.isArray(prev.therapist_names) && prev.therapist_names.length > 0
+        ? prev.therapist_names.map((item) => String(item || '').trim()).filter(Boolean)
+        : normalizedTherapistOptions;
+      if (current.includes(name)) {
+        const next = current.filter((item) => item !== name);
+        return { ...prev, therapist_names: next.length > 0 ? next : current };
+      }
+      return { ...prev, therapist_names: [...current, name] };
+    });
+  };
+
+  const moveTherapistName = (index, direction) => {
+    setDraft((prev) => {
+      const current = Array.isArray(prev.therapist_names) && prev.therapist_names.length > 0
+        ? prev.therapist_names.map((item) => String(item || '').trim()).filter(Boolean)
+        : normalizedTherapistOptions;
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= current.length) return prev;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return { ...prev, therapist_names: next };
+    });
+  };
 
   /** 처방별 셀 태그 값을 반환 (사용자 지정 → 자동 추출 순) */
   const getDoseTag = (prescription) => {
@@ -167,17 +226,15 @@ export default function SettlementSettingsPanel({
       }
       return acc;
     }, {});
-    // 도수치료 태그: 자동 추출값과 같으면 저장하지 않음 (기본값 사용)
+    // 셀 태그: 자동 추출값과 같으면 저장하지 않음 (기본값 사용)
     const cleanedDoseTags = {};
-    if (isManualTherapy) {
-      cleanedPrescriptions.forEach((prescription) => {
-        const customTag = draft.dose_tags[prescription];
-        const autoTag = extractDoseTagFromPrescription(prescription);
-        if (customTag !== undefined && customTag !== autoTag) {
-          cleanedDoseTags[prescription] = customTag;
-        }
-      });
-    }
+    cleanedPrescriptions.forEach((prescription) => {
+      const customTag = draft.dose_tags[prescription];
+      const autoTag = extractDoseTagFromPrescription(prescription);
+      if (customTag !== undefined && customTag !== autoTag) {
+        cleanedDoseTags[prescription] = customTag;
+      }
+    });
     const cleanedShortcuts = {};
     cleanedPrescriptions.forEach(prescription => {
       const customShortcut = String(draft.shortcuts[prescription] || '').trim();
@@ -202,6 +259,9 @@ export default function SettlementSettingsPanel({
         cleanedVisitOnLowerRow[prescription] = true;
       }
     });
+    const cleanedTherapistNames = effectiveSelectedTherapistNames
+      .map((name) => String(name || '').trim())
+      .filter(Boolean);
 
     const cleaned = {
       prescriptions: cleanedPrescriptions,
@@ -211,7 +271,8 @@ export default function SettlementSettingsPanel({
       shortcuts: cleanedShortcuts,
       duration_minutes: cleanedDurationMinutes,
       visit_on_lower_row: cleanedVisitOnLowerRow,
-      ...(isManualTherapy ? { dose_tags: cleanedDoseTags } : {}),
+      dose_tags: cleanedDoseTags,
+      therapist_names: cleanedTherapistNames,
     };
     const monthly_settlement_settings = setMonthlySettlementSettings(settings, year, month, type, cleaned);
     const nextSettings = {
@@ -237,6 +298,7 @@ export default function SettlementSettingsPanel({
     } else {
       nextSettings.prescriptions = cleaned.prescriptions;
       nextSettings.incentive_percentage = cleaned.incentive_percentage;
+      nextSettings.shockwave_dose_tags = { ...cleanedDoseTags };
       nextSettings.shortcuts = { ...cleanedShortcuts };
       nextSettings.duration_minutes = { ...cleanedDurationMinutes };
       nextSettings.visit_on_lower_row = { ...cleanedVisitOnLowerRow };
@@ -259,63 +321,97 @@ export default function SettlementSettingsPanel({
         </div>
 
         <div className="settlement-settings-grid">
-          <div className="settlement-settings-list">
-            {isManualTherapy ? (
-              <div className="settlement-settings-row settlement-settings-header-row manual-therapy-row">
-                <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
-                <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>셀 태그</span>
-                <span className="settlement-label" style={{ width: 76, textAlign: 'center' }}>치료시간</span>
-                <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
-                <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
-                <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
-                <span className="settlement-label" style={{ width: 52, textAlign: 'center' }}>회차↓</span>
-                <span style={{ width: 16 }}></span>
-                <span style={{ width: 44 }}></span>
-              </div>
+          <section className="settlement-therapist-picker">
+            <div className="settlement-section-heading">
+              <strong>통계 치료사</strong>
+              <span>스케줄 셀에서 확인된 치료사 중 통계에 표시할 이름과 순서를 정합니다.</span>
+            </div>
+            {normalizedTherapistOptions.length === 0 ? (
+              <p className="settlement-empty-hint">완료된 스케줄 기록이 생기면 치료사 이름이 여기에 표시됩니다.</p>
             ) : (
-              <div className="settlement-settings-row settlement-settings-header-row shockwave-row">
-                <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
-                <span className="settlement-label" style={{ width: 76, textAlign: 'center' }}>치료시간</span>
-                <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
-                <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
-                <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
-                <span className="settlement-label" style={{ width: 52, textAlign: 'center' }}>회차↓</span>
-                <span style={{ width: 16 }}></span>
-                <span style={{ width: 44 }}></span>
+              <div className="settlement-therapist-list">
+                {normalizedTherapistOptions.map((name) => {
+                  const isSelected = selectedTherapistSet.has(name);
+                  const selectedIndex = effectiveSelectedTherapistNames.indexOf(name);
+                  return (
+                    <div key={name} className={`settlement-therapist-item ${isSelected ? 'is-selected' : ''}`}>
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleTherapistName(name)}
+                        />
+                        <span>{name}</span>
+                      </label>
+                      <div className="settlement-therapist-order">
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-xs"
+                          disabled={!isSelected || selectedIndex <= 0}
+                          onClick={() => moveTherapistName(selectedIndex, -1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-xs"
+                          disabled={!isSelected || selectedIndex < 0 || selectedIndex >= effectiveSelectedTherapistNames.length - 1}
+                          onClick={() => moveTherapistName(selectedIndex, 1)}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
+          </section>
+
+          <div className="settlement-settings-list">
+            <div className="settlement-section-heading">
+              <strong>처방 설정</strong>
+              <span>처방명, 셀 태그, 병합 시간, 단축키, 색상은 스케줄 셀 입력에도 같이 반영됩니다.</span>
+            </div>
+            <div className="settlement-settings-row settlement-settings-header-row treatment-row">
+              <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
+              <span className="settlement-label" style={{ width: 84, textAlign: 'center' }}>셀 태그</span>
+              <span className="settlement-label" style={{ width: 76, textAlign: 'center' }}>치료시간</span>
+              <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
+              <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
+              <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
+              <span className="settlement-label" style={{ width: 52, textAlign: 'center' }}>회차↓</span>
+              <span style={{ width: 16 }}></span>
+              <span style={{ width: 44 }}></span>
+            </div>
             {draft.prescriptions.map((prescription, index) => {
               const doseTag = getDoseTag(prescription);
               const durationMinutes = getDurationMinutes(prescription);
               return (
-                <div key={`${prescription}-${index}`} className={`settlement-settings-row ${isManualTherapy ? 'manual-therapy-row' : 'shockwave-row'}`}>
+                <div key={`${prescription}-${index}`} className="settlement-settings-row treatment-row">
                   <input
                     className="form-input settlement-prescription-input"
                     value={prescription}
                     onChange={(event) => updatePrescription(index, event.target.value)}
                   />
-                  {isManualTherapy && (
-                    <div className="settlement-dose-tag-group">
-                      <input
-                        className="form-input settlement-dose-tag-input"
-                        value={doseTag}
-                        placeholder="—"
-                        title={doseTag ? `스케줄 셀에 "주한솔${doseTag}" 형태로 표시` : '셀 태그 없음 (이름만 표시)'}
-                        onChange={(event) => {
-                          const val = event.target.value.replace(/[^\d]/g, '').slice(0, 3);
-                          setDraft((prev) => ({
-                            ...prev,
-                            dose_tags: { ...prev.dose_tags, [prescription]: val },
-                          }));
-                        }}
-                      />
-                      {doseTag && (
-                        <span className="settlement-dose-tag-preview" title="셀 미리보기">
-                          홍길동{doseTag}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <div className="settlement-dose-tag-group">
+                    <input
+                      className="form-input settlement-dose-tag-input"
+                      value={doseTag}
+                      placeholder="없음"
+                      title={doseTag ? `스케줄 셀에 "주한솔${doseTag}" 형태로 표시` : '셀 태그 없음 (이름만 표시)'}
+                      onChange={(event) => {
+                        const val = event.target.value.replace(/[^\d]/g, '').slice(0, 3);
+                        setDraft((prev) => ({
+                          ...prev,
+                          dose_tags: { ...prev.dose_tags, [prescription]: val },
+                        }));
+                      }}
+                    />
+                    <span className="settlement-dose-tag-preview" title="셀 미리보기">
+                      홍길동{doseTag}
+                    </span>
+                  </div>
                   <div className="settlement-duration-group">
                     <input
                       type="number"

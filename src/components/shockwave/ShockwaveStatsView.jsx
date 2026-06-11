@@ -5,7 +5,7 @@ import { syncTodayShockwaveScheduleToStats, syncMonthShockwaveScheduleToStats } 
 import { useToast } from '../common/Toast';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { appendLogTherapists, buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { appendLogTherapists, applyTherapistNameOrder, buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { GridSkeleton, SettlementSkeleton } from '../common/LoadingSkeleton';
 import '../../styles/shockwave_stats.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
@@ -100,9 +100,13 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
   );
 
   // Therapist filter state (lifted from ShockwaveDataGrid)
-  const displayTherapists = useMemo(
+  const availableTherapists = useMemo(
     () => appendLogTherapists(buildDisplayTherapists(displayBaseTherapists, monthlyTherapists), safeLogs),
     [displayBaseTherapists, monthlyTherapists, safeLogs]
+  );
+  const displayTherapists = useMemo(
+    () => applyTherapistNameOrder(availableTherapists, effectiveSettlementSettings?.therapist_names),
+    [availableTherapists, effectiveSettlementSettings?.therapist_names]
   );
   const therapistNameList = useMemo(
     () => displayTherapists.map((t) => t.name).filter(Boolean),
@@ -673,8 +677,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
                       <ShockwaveStatsErrorBoundary>
                         <ShockwaveDataGrid
                           logs={safeLogs}
-                          therapists={displayBaseTherapists}
-                          monthlyTherapists={monthlyTherapists}
+                          therapists={displayTherapists}
+                          monthlyTherapists={[]}
                           currentYear={currentYear}
                           currentMonth={currentMonth}
                           fetchLogs={fetchLogs}
@@ -709,8 +713,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
               ) : (
                 <ShockwaveSettlementView
                   logs={safeLogs}
-                  therapists={displayBaseTherapists}
-                  monthlyTherapists={monthlyTherapists}
+                  therapists={displayTherapists}
+                  monthlyTherapists={[]}
                   currentMonth={currentMonth}
                   prescriptions={settlementPrescriptions}
                   prescriptionPrices={settlementPrices}
@@ -729,8 +733,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
             <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
               <ShockwaveNewPatientsView
                 logs={safeLogs}
-                therapists={displayBaseTherapists}
-                monthlyTherapists={monthlyTherapists}
+                therapists={displayTherapists}
+                monthlyTherapists={[]}
                 currentMonth={currentMonth}
                 selectedTherapistNames={selectedTherapistNames}
               />
@@ -744,6 +748,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
               month={currentMonth}
               settings={shockwaveSettings}
               effectiveSettings={effectiveSettlementSettings}
+              therapistOptions={availableTherapists}
               onSave={handleSaveSettlementSettings}
             />
           )}

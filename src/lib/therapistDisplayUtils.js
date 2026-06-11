@@ -101,3 +101,42 @@ export function appendLogTherapists(displayTherapists, logs) {
     })),
   ];
 }
+
+export function applyTherapistNameOrder(displayTherapists, therapistNames) {
+  const base = Array.isArray(displayTherapists) ? displayTherapists.filter(Boolean) : [];
+  const orderedNames = Array.isArray(therapistNames)
+    ? therapistNames.map((name) => String(name || '').trim()).filter(Boolean)
+    : [];
+
+  if (orderedNames.length === 0) return base;
+
+  const byName = new Map();
+  base.forEach((therapist, index) => {
+    const name = String(therapist?.name || '').trim();
+    if (!name || byName.has(name)) return;
+    byName.set(name, {
+      ...therapist,
+      slotIdx: therapist.slotIdx ?? index,
+      displayName: therapist.displayName || name,
+    });
+  });
+
+  return orderedNames.map((name, index) => {
+    const existing = byName.get(name);
+    if (existing) {
+      return {
+        ...existing,
+        slotIdx: index,
+      };
+    }
+    return {
+      id: `configured-therapist-${name}`,
+      key: `configured-therapist-${name}`,
+      slotIdx: index,
+      name,
+      displayName: name,
+      rangeLabel: '',
+      isConfiguredOnly: true,
+    };
+  });
+}

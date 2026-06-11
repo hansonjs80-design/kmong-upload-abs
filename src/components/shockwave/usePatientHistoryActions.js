@@ -8,6 +8,7 @@ import {
 } from '../../lib/patientHistoryModalUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { supabase } from '../../lib/supabaseClient';
+import { inheritMonthlyTherapistsFromPreviousRows } from '../../lib/monthlyTherapistInheritanceUtils';
 import { get4060PrescriptionFromContent, has4060Pattern } from '../../lib/schedulerContentFormat';
 import {
   applyVisitCountToSchedulerContent,
@@ -103,8 +104,6 @@ const resolveTherapistNameForHistory = ({
 
 const getHistoryMonthKey = (year, month, type) => `${year}-${month}-${type}`;
 
-const getHistoryMonthValue = (year, month) => (Number(year) * 12) + Number(month);
-
 const loadMonthlyTherapistRowsForHistory = async ({
   year,
   month,
@@ -123,7 +122,6 @@ const loadMonthlyTherapistRowsForHistory = async ({
 
   if (!error && Array.isArray(data) && data.length > 0) return data;
 
-  const currentValue = getHistoryMonthValue(year, month);
   const lookbackYear = month <= 12 ? year - 1 : year;
   const { data: previousRows, error: prevError } = await supabase
     .from('shockwave_monthly_therapists')
@@ -136,36 +134,10 @@ const loadMonthlyTherapistRowsForHistory = async ({
     .order('start_day')
     .limit(80);
 
-  const previousMonths = (previousRows || []).filter((item) => {
-    const value = getHistoryMonthValue(item.year, item.month);
-    return value < currentValue;
-  });
-  const inheritedValue = previousMonths.reduce((max, item) => (
-    Math.max(max, getHistoryMonthValue(item.year, item.month))
-  ), -Infinity);
-  const prevData = previousMonths.filter((item) => (
-    getHistoryMonthValue(item.year, item.month) === inheritedValue
-  ));
-
-  if (!prevError && prevData.length > 0) {
-    const slotMap = new Map();
-    prevData.forEach((item) => {
-      const existing = slotMap.get(item.slot_index);
-      if (!existing || item.start_day > existing.start_day) {
-        slotMap.set(item.slot_index, item);
-      }
-    });
-    const lastDay = new Date(year, month, 0).getDate();
-    return Array.from(slotMap.values()).map((item) => ({
-      slot_index: item.slot_index,
-      therapist_name: item.therapist_name,
-      start_day: 1,
-      end_day: lastDay,
-      year,
-      month,
-      type,
-    }));
-  }
+  const inherited = !prevError
+    ? inheritMonthlyTherapistsFromPreviousRows(previousRows, year, month, type)
+    : [];
+  if (inherited.length > 0) return inherited;
 
   const baseTherapists = type === 'manual_therapy' ? manualTherapists : therapists;
   const lastDay = new Date(year, month, 0).getDate();

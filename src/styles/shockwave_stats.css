@@ -2281,7 +2281,7 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 }
 
 .sw-settlement-settings-card {
-  max-width: 920px;
+  max-width: 1120px;
 }
 
 .sw-settlement-settings-subtext {
@@ -2293,14 +2293,95 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
 
 .settlement-settings-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) 180px;
-  gap: 18px;
+  grid-template-columns: minmax(260px, 320px) minmax(520px, 1fr) 150px;
+  gap: 14px;
   align-items: start;
 }
 
+.settlement-section-heading {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.settlement-section-heading strong {
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.settlement-section-heading span,
+.settlement-empty-hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.settlement-therapist-picker,
 .settlement-settings-list {
   display: grid;
   gap: 8px;
+}
+
+.settlement-therapist-picker {
+  padding: 12px;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.settlement-therapist-list {
+  display: grid;
+  gap: 6px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.settlement-therapist-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.settlement-therapist-item.is-selected {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.settlement-therapist-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #1e293b;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.settlement-therapist-item label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settlement-therapist-order {
+  display: flex;
+  gap: 4px;
+}
+
+.btn.btn-xs {
+  min-height: 26px;
+  padding: 3px 7px;
+  font-size: 0.72rem;
+  border-radius: 7px;
 }
 
 .settlement-settings-row {
@@ -2313,12 +2394,10 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   background: #f8fafc;
 }
 
-.shockwave-row {
-  grid-template-columns: minmax(92px, 150px) minmax(72px, 86px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
-}
-
+.treatment-row,
+.shockwave-row,
 .manual-therapy-row {
-  grid-template-columns: minmax(92px, 150px) minmax(70px, 90px) minmax(72px, 86px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
+  grid-template-columns: minmax(92px, 150px) minmax(78px, 110px) minmax(72px, 86px) minmax(70px, 90px) minmax(90px, 140px) 36px 24px auto;
 }
 
 .settlement-settings-header-row {
@@ -2487,12 +2566,10 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
     grid-template-columns: 1fr;
   }
 
-  .shockwave-row {
-    grid-template-columns: 1fr 76px 76px 1fr 34px 22px auto;
-  }
-  
+  .treatment-row,
+  .shockwave-row,
   .manual-therapy-row {
-    grid-template-columns: 1fr 76px 76px 76px 1fr 34px 22px auto;
+    grid-template-columns: 1fr 82px 76px 76px 1fr 34px 22px auto;
   }
 }
 
@@ -4398,6 +4475,61 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   border: 3px solid #94a3b8 !important;
   border-radius: 12px !important;
   overflow: hidden !important;
+}
+
+.sw-settlement-table-wrap:has(.sw-settlement-table),
+.sw-settlement-table-wrap:has(.sw-compact-settlement-table),
+.sw-settlement-table-wrap:has(.sw-manual-compact-settlement-table) {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sw-settlement-table,
+.sw-compact-settlement-table,
+.sw-manual-compact-settlement-table {
+  width: max-content !important;
+  min-width: 100% !important;
+}
+
+.sw-stats-container:has(.sw-settlement-table),
+.sw-stats-container:has(.sw-compact-settlement-table),
+.sw-stats-container:has(.sw-manual-compact-settlement-table) {
+  width: max-content !important;
+  min-width: 100% !important;
+}
+
+.sw-stats-container:has(.sw-settlement-table) .sw-stats-layout,
+.sw-stats-container:has(.sw-compact-settlement-table) .sw-stats-layout,
+.sw-stats-container:has(.sw-manual-compact-settlement-table) .sw-stats-layout,
+.sw-stats-container:has(.sw-settlement-table) .sw-stats-panel,
+.sw-stats-container:has(.sw-compact-settlement-table) .sw-stats-panel,
+.sw-stats-container:has(.sw-manual-compact-settlement-table) .sw-stats-panel,
+.sw-stats-body--settlement:has(.sw-settlement-table),
+.sw-stats-body--settlement:has(.sw-compact-settlement-table),
+.sw-stats-body--settlement:has(.sw-manual-compact-settlement-table),
+.sw-stats-body--settlement:has(.sw-settlement-table) .sw-settlement-card,
+.sw-stats-body--settlement:has(.sw-compact-settlement-table) .sw-settlement-card,
+.sw-stats-body--settlement:has(.sw-manual-compact-settlement-table) .sw-settlement-card {
+  width: max-content !important;
+  max-width: none !important;
+  min-width: 100% !important;
+}
+
+.sw-stats-body--settlement:has(.sw-settlement-table),
+.sw-stats-body--settlement:has(.sw-compact-settlement-table),
+.sw-stats-body--settlement:has(.sw-manual-compact-settlement-table),
+.sw-stats-body--settlement:has(.sw-settlement-table) .sw-settlement-table-wrap,
+.sw-stats-body--settlement:has(.sw-compact-settlement-table) .sw-settlement-table-wrap,
+.sw-stats-body--settlement:has(.sw-manual-compact-settlement-table) .sw-settlement-table-wrap {
+  overflow: visible !important;
+}
+
+.sw-stats-body--settlement:has(.sw-settlement-table) .sw-settlement-table-wrap,
+.sw-stats-body--settlement:has(.sw-compact-settlement-table) .sw-settlement-table-wrap,
+.sw-stats-body--settlement:has(.sw-manual-compact-settlement-table) .sw-settlement-table-wrap {
+  max-width: none !important;
 }
 
 .sw-settlement-table thead .therapist-col,

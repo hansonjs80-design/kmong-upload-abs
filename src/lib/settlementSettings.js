@@ -11,6 +11,8 @@ export const DEFAULT_SHOCKWAVE_SETTLEMENT = {
     'F1.5': '3',
   },
   duration_minutes: {},
+  dose_tags: {},
+  therapist_names: [],
   incentive_percentage: 7,
 };
 
@@ -28,6 +30,8 @@ export const DEFAULT_MANUAL_THERAPY_SETTLEMENT = {
     '40분': 40,
     '60분': 60,
   },
+  dose_tags: {},
+  therapist_names: [],
   incentive_percentage: 0,
 };
 
@@ -55,6 +59,12 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
   const rawVisitOnLowerRow = isManual
     ? settings?.manual_therapy_visit_on_lower_row
     : settings?.visit_on_lower_row;
+  const rawDoseTags = isManual
+    ? settings?.manual_therapy_dose_tags
+    : settings?.shockwave_dose_tags;
+  const rawTherapistNames = isManual
+    ? settings?.manual_therapy_stats_therapist_names
+    : settings?.shockwave_stats_therapist_names;
 
   return {
     prescriptions: Array.isArray(prescriptions) && prescriptions.length > 0
@@ -74,6 +84,10 @@ export function buildBaseSettlementSettings(settings, type = 'shockwave') {
       ...(rawDurationMinutes || {}),
     },
     visit_on_lower_row: rawVisitOnLowerRow || {},
+    dose_tags: rawDoseTags || {},
+    therapist_names: Array.isArray(rawTherapistNames)
+      ? rawTherapistNames.map((name) => String(name || '').trim()).filter(Boolean)
+      : fallback.therapist_names,
     incentive_percentage: isManual
       ? settings?.manual_therapy_incentive_percentage ?? fallback.incentive_percentage
       : settings?.incentive_percentage ?? fallback.incentive_percentage,
@@ -120,7 +134,13 @@ export function getEffectiveSettlementSettings(settings, year, month, type = 'sh
       ...base.visit_on_lower_row,
       ...(override?.visit_on_lower_row || {}),
     },
-    dose_tags: override?.dose_tags || {},
+    dose_tags: {
+      ...base.dose_tags,
+      ...(override?.dose_tags || {}),
+    },
+    therapist_names: Array.isArray(override?.therapist_names)
+      ? override.therapist_names.map((name) => String(name || '').trim()).filter(Boolean)
+      : base.therapist_names,
     incentive_percentage: override?.incentive_overridden === true || Number(override?.incentive_percentage) > 0
       ? Number(override?.incentive_percentage) || 0
       : base.incentive_percentage,
@@ -146,7 +166,10 @@ export function setMonthlySettlementSettings(settings, year, month, type, nextCo
         shortcuts: nextConfig?.shortcuts || {},
         duration_minutes: nextConfig?.duration_minutes || {},
         visit_on_lower_row: nextConfig?.visit_on_lower_row || {},
-        ...(nextConfig?.dose_tags ? { dose_tags: nextConfig.dose_tags } : {}),
+        dose_tags: nextConfig?.dose_tags || {},
+        therapist_names: Array.isArray(nextConfig?.therapist_names)
+          ? nextConfig.therapist_names.map((name) => String(name || '').trim()).filter(Boolean)
+          : [],
         incentive_percentage: Number(nextConfig?.incentive_percentage) || 0,
         incentive_overridden: true,
       },

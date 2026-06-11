@@ -9,8 +9,16 @@ import { isTreatmentCancelBg, isTreatmentCompleteBg } from '../../lib/scheduleSt
 import { buildManualTherapyUnmergePayload, getManualTherapyRowSpan } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload, resolveManualTherapyAutoPrescription } from '../../lib/scheduleManualTherapyAutoMergeUtils';
 import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import { inheritMonthlyTherapistsFromPreviousRows } from '../../lib/monthlyTherapistInheritanceUtils';
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
-import { DAY_NAMES, getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
+import { getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
+import {
+  getFocusedDayColumnWidth,
+  getScheduleDateHeaderLabel,
+  getTherapistGridTemplate,
+  getVisibleTherapistSlots,
+  isSingleTherapistFocus,
+} from '../../lib/schedulerTherapistViewUtils';
 import { useToast } from '../common/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { isAdminUser } from '../../lib/authPermissions';
@@ -71,6 +79,29 @@ import {
   addBodyPartToMap,
   getExplicitVisitSuffix,
 } from '../../lib/schedulerUtils';
+
+function SchedulerSettingsIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={2}
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.43l1.004-.827c.292-.24.437-.613.43-.991a6.936 6.936 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.645-.869L9.594 3.94Z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+      />
+    </svg>
+  );
+}
 
 const PATIENT_HISTORY_GROUPS = [
   { key: 'shockwave', label: '충격파 내역' },
@@ -356,7 +387,7 @@ const renderSchedulerVisitSuffix = (suffix, className, style) => {
 };
 
 const MemoizedCell = memo(({
-  cellKey, weekIdx, dayIdx, rowIdx, colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
+  cellKey, weekIdx, dayIdx, rowIdx, colIdx, displayColIdx = colIdx, dayInfo, slotInfo, showTimeCol, gridRowStart, isLastRenderedRow, colCount,
   cellData, pendingContent, pendingMergeSpan, mergeSpan, editingCell, imePreviewCell, selectedKeys, selectedCell, clipboardSource,
   workState, staffBlockRule, effectivePrescriptionColors,
   editValue,
@@ -389,7 +420,7 @@ const MemoizedCell = memo(({
   const isImePreview = imePreviewCell === cellKey;
   const isSelected = selectedKeys.has(cellKey);
   const isPrimary = selectedCell && selectedCell.w === weekIdx && selectedCell.d === dayIdx && selectedCell.r === rowIdx && selectedCell.c === colIdx;
-  const gridColumnStart = showTimeCol ? colIdx + 2 : colIdx + 1;
+  const gridColumnStart = showTimeCol ? displayColIdx + 2 : displayColIdx + 1;
 
   let visualRowSpan = 1;
   if (effectiveMergeSpan.rowSpan > 1) {
@@ -434,7 +465,7 @@ const MemoizedCell = memo(({
     borderBottom: isLastRenderedRow ? 'none' : `1px solid ${HORIZONTAL_BORDER_COLOR}`,
   };
 
-  if (colIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
+  if (displayColIdx + effectiveMergeSpan.colSpan - 1 === colCount - 1) {
     inlineStyle.borderRight = 'none';
   }
 
@@ -683,6 +714,7 @@ const MemoizedCell = memo(({
   if (prevProps.pendingMergeSpan !== nextProps.pendingMergeSpan) return false;
   if (prevProps.cellData !== nextProps.cellData) return false;
   if (prevProps.overrideVisitSuffix !== nextProps.overrideVisitSuffix) return false;
+  if (prevProps.displayColIdx !== nextProps.displayColIdx) return false;
   
   if (prevProps.mergeSpan.rowSpan !== nextProps.mergeSpan.rowSpan) return false;
   if (prevProps.mergeSpan.colSpan !== nextProps.mergeSpan.colSpan) return false;
@@ -774,6 +806,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [editingCell, setEditingCell] = useState(null);       // "w-d-r-c" 키 문자열
   const [editValue, setEditValue] = useState('');
   const [loadedMemosKey, setLoadedMemosKey] = useState('');
+  const scheduleScrollKey = useMemo(
+    () => getShockwaveScheduleScrollKey(currentYear, currentMonth),
+    [currentYear, currentMonth]
+  );
   const [contextMenu, setContextMenu] = useState(null); // { x, y, weekIdx, dayIdx, rowIdx, colIdx, currentPrescription }
   const [activeContextSubmenu, setActiveContextSubmenu] = useState(null);
   const [contextMenuBodyPartOptions, setContextMenuBodyPartOptions] = useState([]);
@@ -784,6 +820,13 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [contextMenuMemoDrafts, setContextMenuMemoDrafts] = useState([]);
   const [contextMenuVisitInput, setContextMenuVisitInput] = useState('');
   const [contextMenuReservationInput, setContextMenuReservationInput] = useState('');
+  const activeScheduleMonthKey = scheduleScrollKey;
+  const [displayScheduleMonthKey, setDisplayScheduleMonthKey] = useState(activeScheduleMonthKey);
+
+  useEffect(() => {
+    setDisplayScheduleMonthKey(activeScheduleMonthKey);
+    setLoadedMemosKey('');
+  }, [activeScheduleMonthKey]);
 
   const {
     pendingCellBgColors,
@@ -816,6 +859,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     [memos, pendingMemoOverrides]
   );
 
+  const shockwaveMergeSettings = useMemo(() => (
+    getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave')
+  ), [settings, currentYear, currentMonth]);
+
+  const manualTherapyMergeSettings = useMemo(() => (
+    getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy')
+  ), [settings, currentYear, currentMonth]);
+
   // 환자 내역 검색 팝업 상태 (Cmd+F)
   const [patientHistoryModalOpen, setPatientHistoryModalOpen] = useState(false);
   const [patientHistoryModalData, setPatientHistoryModalData] = useState({ loading: false, logs: [], searchName: '', searchChart: '' });
@@ -829,8 +880,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       ? editValue
       : (pendingDisplayValues[key] ?? selectedMemo.content ?? '');
     const selectedPrescription = String(selectedMemo.prescription || '').trim();
-    const manualPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
-      ? settings.manual_therapy_prescriptions
+    const manualPrescriptions = Array.isArray(manualTherapyMergeSettings?.prescriptions)
+      ? manualTherapyMergeSettings.prescriptions
       : [];
     if (
       has4060Pattern(selectedContent) ||
@@ -839,7 +890,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       return 'manual';
     }
     return 'shockwave';
-  }, [editValue, editingCell, effectiveMemos, pendingDisplayValues, selectedCell, settings?.manual_therapy_prescriptions]);
+  }, [editValue, editingCell, effectiveMemos, manualTherapyMergeSettings?.prescriptions, pendingDisplayValues, selectedCell]);
   const patientHistoryLogGroups = useMemo(() => {
     const groupMap = new Map(PATIENT_HISTORY_GROUPS.map((group) => [group.key, { ...group, logs: [] }]));
     (patientHistoryModalData.logs || []).forEach((log) => {
@@ -936,6 +987,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
   const [todayShortcutTooltip, setTodayShortcutTooltip] = useState(null);
   const [chartSelector, setChartSelector] = useState(null);
   const [imePreviewCell, setImePreviewCell] = useState(null);
+  const [focusedTherapistSlot, setFocusedTherapistSlot] = useState(null);
   const contextMenuRef = useRef(null);
   const editInputRef = useRef(null);
   const patientHistorySearchInputRef = useRef(null);
@@ -955,30 +1007,59 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     contextMenuRef,
     setContextMenu,
   });
-  const scheduleScrollKey = useMemo(
-    () => getShockwaveScheduleScrollKey(currentYear, currentMonth),
-    [currentYear, currentMonth]
-  );
-
   const monthlyTherapistSlotCount = useMemo(
     () => (monthlyTherapists || []).reduce((max, item) => Math.max(max, (Number(item?.slot_index) || 0) + 1), 0),
     [monthlyTherapists]
   );
   const colCount = Math.max(1, therapists.length, monthlyTherapistSlotCount);
+  const visibleTherapistSlots = useMemo(
+    () => getVisibleTherapistSlots(colCount, focusedTherapistSlot),
+    [colCount, focusedTherapistSlot]
+  );
+  const isSingleTherapistFocused = isSingleTherapistFocus(visibleTherapistSlots, colCount);
   const {
     activeColRatios,
     dayColWidth,
+    focusedDayColWidth,
     rowHeight,
     startColResize,
     startDayResize,
     startRowResize,
     therapistColsCSS,
   } = useScheduleResizeState({ colCount });
+  const visibleTherapistColsCSS = getTherapistGridTemplate(isSingleTherapistFocused, therapistColsCSS);
+  const effectiveDayColWidth = useMemo(
+    () => getFocusedDayColumnWidth(dayColWidth, colCount, isSingleTherapistFocused, focusedDayColWidth),
+    [colCount, dayColWidth, focusedDayColWidth, isSingleTherapistFocused]
+  );
 
   const effectiveDayOverrides = useMemo(
     () => getMonthlyDayOverrides(settings?.day_overrides, currentYear, currentMonth),
     [settings?.day_overrides, currentYear, currentMonth]
   );
+
+  const scheduleMonthlyTherapists = useMemo(() => {
+    const baseRows = Array.isArray(monthlyTherapists) ? monthlyTherapists.filter(Boolean) : [];
+    if (baseRows.length === 0) return baseRows;
+
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const inheritedNextRows = inheritMonthlyTherapistsFromPreviousRows(
+      baseRows,
+      nextYear,
+      nextMonth,
+      'shockwave'
+    );
+    if (inheritedNextRows.length === 0) return baseRows;
+
+    const existingKeys = new Set(baseRows.map((item) => (
+      `${Number(item?.year || currentYear)}-${Number(item?.month || currentMonth)}-${Number(item?.slot_index)}-${Number(item?.start_day || 1)}`
+    )));
+    const nextRows = inheritedNextRows.filter((item) => (
+      !existingKeys.has(`${Number(item.year)}-${Number(item.month)}-${Number(item.slot_index)}-${Number(item.start_day || 1)}`)
+    ));
+    return [...baseRows, ...nextRows];
+  }, [currentMonth, currentYear, monthlyTherapists]);
 
   useEffect(() => {
     saveMemoRef.current = queuedOnSaveMemo;
@@ -995,7 +1076,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     currentMonth,
     currentYear,
     effectiveDayOverrides,
-    monthlyTherapists,
+    monthlyTherapists: scheduleMonthlyTherapists,
     settings,
     staffMemos,
     therapists,
@@ -1027,14 +1108,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     viewRef,
   });
 
-  const shockwaveMergeSettings = useMemo(() => (
-    getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'shockwave')
-  ), [settings, currentYear, currentMonth]);
-
-  const manualTherapyMergeSettings = useMemo(() => (
-    getEffectiveSettlementSettings(settings, currentYear, currentMonth, 'manual_therapy')
-  ), [settings, currentYear, currentMonth]);
-
   const treatmentDurationMinutesByPrescription = useMemo(() => ({
     ...(shockwaveMergeSettings?.duration_minutes || {}),
     ...(manualTherapyMergeSettings?.duration_minutes || {}),
@@ -1061,22 +1134,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     memos,
     weeks,
     settings,
+    manualTherapySettings: manualTherapyMergeSettings,
     setChartSelector,
   });
 
   useEffect(() => {
     let cancelled = false;
-    setLoadedMemosKey('');
     setPendingDisplayValues({});
     Promise.resolve(onLoadMemos(currentYear, currentMonth)).finally(() => {
       if (!cancelled) {
-        setLoadedMemosKey(getShockwaveScheduleScrollKey(currentYear, currentMonth));
+        setLoadedMemosKey(activeScheduleMonthKey);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [currentYear, currentMonth, onLoadMemos, setPendingDisplayValues]);
+  }, [activeScheduleMonthKey, currentYear, currentMonth, onLoadMemos, setPendingDisplayValues]);
 
   // ── 기존 40/60 셀과 빈 셀 잔여 메타데이터 보정 ──
   const prescriptionPatchKeyRef = useRef(null);
@@ -2172,7 +2245,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           const dayInfo = weeks[w][d];
           const slotInfo = getTimeSlotsForDay(dayInfo)[r];
           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
-          const therapistName = getTherapistNameForDate(c, dayInfo.day) || '';
+          const therapistName = getTherapistNameForDate(c, dayInfo.day, dayInfo) || '';
           const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
           
           setHoverCell({ weekIdx: w, dayIdx: d, rowIdx: r, colIdx: c, staffBlockRule, slotInfo, isMergedView: false });
@@ -2299,7 +2372,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setTodayShortcutTooltip,
   });
 
-  const isScheduleMonthLoading = loadedMemosKey !== scheduleScrollKey;
+  const isScheduleMonthLoading = loadedMemosKey !== activeScheduleMonthKey || displayScheduleMonthKey !== activeScheduleMonthKey;
   const renderMemos = useMemo(
     () => {
       if (isScheduleMonthLoading) return {};
@@ -2325,8 +2398,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           '--sw-therapist-font-size': `${effectiveSchedulerTextSettings.therapist_font_size}px`,
           '--sw-therapist-font-weight': effectiveSchedulerTextSettings.therapist_font_weight,
           '--sw-therapist-row-height': `${effectiveSchedulerTextSettings.therapist_height}px`,
-          '--sw-therapist-cols': therapistColsCSS,
-          '--sw-day-col-width': dayColWidth ? `${dayColWidth}px` : 'none',
+          '--sw-therapist-cols': visibleTherapistColsCSS,
+          '--sw-day-col-width': effectiveDayColWidth ? `${effectiveDayColWidth}px` : 'none',
         }}
         onMouseLeave={() => setHoverCell(null)}
         onMouseMove={(e) => {
@@ -2343,8 +2416,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         </div>
       )}
       {useMemo(() => weeks.map((weekDays, weekIdx) => {
-        const daysContainerWidth = dayColWidth
-          ? dayColWidth * weekDays.length + TIME_COL_WIDTH + 4
+        const daysContainerWidth = effectiveDayColWidth
+          ? effectiveDayColWidth * weekDays.length + TIME_COL_WIDTH + 4
           : null;
         return (
         <div
@@ -2411,8 +2484,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               // 첫 번째 요일에만 시간 열 표사
               const showTimeCol = dayIdx === 0;
               const gridCols = showTimeCol
-                ? `${TIME_COL_WIDTH}px ${therapistColsCSS}`
-                : therapistColsCSS;
+                ? `${TIME_COL_WIDTH}px ${visibleTherapistColsCSS}`
+                : visibleTherapistColsCSS;
 
               let headerClass = 'sw-day-header-cell';
               if (dayInfo.isHoliday) headerClass += ' holiday';
@@ -2420,8 +2493,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               else if (isToday) headerClass += ' today';
               else if (dayInfo.dow === 6) headerClass += ' saturday';
 
-              const targetColWidth = showTimeCol && dayColWidth ? dayColWidth + TIME_COL_WIDTH : dayColWidth;
+              const targetColWidth = showTimeCol && effectiveDayColWidth ? effectiveDayColWidth + TIME_COL_WIDTH : effectiveDayColWidth;
               const flexBasis = showTimeCol ? TIME_COL_WIDTH : 0;
+              const showHeaderSettingsButton = canManageSchedulerSettings && weekIdx === 0 && dayIdx === weekDays.length - 1;
+              const dateHeaderLabel = getScheduleDateHeaderLabel(dayInfo, isSingleTherapistFocused);
               const dayFlexStyle = targetColWidth
                 ? { flex: `0 0 ${targetColWidth}px`, width: `${targetColWidth}px`, minWidth: 0 }
                 : { flex: `1 1 ${flexBasis}px`, minWidth: 0 };
@@ -2435,11 +2510,22 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     )}
                     <div className={`${headerClass}${showTimeCol ? ' with-week-col' : ''}`}>
                       <span className="sw-day-header-label sw-day-header-label--desktop">
-                        {dayInfo.month}월 {dayInfo.day}일 {DAY_NAMES[dayInfo.dow]}요일
+                        {dateHeaderLabel}
                       </span>
                       <span className="sw-day-header-label sw-day-header-label--mobile">
-                        {dayInfo.month}월 {dayInfo.day}일 ({DAY_NAMES[dayInfo.dow]})
+                        {getScheduleDateHeaderLabel(dayInfo, true)}
                       </span>
+                      {showHeaderSettingsButton && (
+                        <button
+                          type="button"
+                          className="sw-day-header-settings-btn"
+                          onClick={() => setShowTherapistConfig(true)}
+                          title="설정"
+                          aria-label="설정"
+                        >
+                          <SchedulerSettingsIcon />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -2449,20 +2535,29 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                       {showTimeCol && (
                         <div className="sw-time-label" style={{ borderBottom: 'none' }}>시간</div>
                       )}
-                      {Array.from({ length: colCount }, (_, ci) => {
+                      {visibleTherapistSlots.map((ci, visibleCi) => {
                         let nameClass = 'sw-therapist-name';
                         if (dayInfo.isHoliday) nameClass += ' holiday';
                         else if (!dayInfo.isCurrentMonth) nameClass += ' other-month';
                         else if (isToday) nameClass += ' today';
+                        if (isSingleTherapistFocused) nameClass += ' focused-single';
                         return (
-                          <div key={ci} className={nameClass} style={ci === colCount - 1 ? { borderRight: 'none' } : undefined}>
-                            {getTherapistNameForDate(ci, dayInfo.day) || `치료사${ci + 1}`}
+                          <div
+                            key={ci}
+                            className={nameClass}
+                            style={visibleCi === visibleTherapistSlots.length - 1 ? { borderRight: 'none' } : undefined}
+                            title="더블 클릭하면 이 치료사만 보기/전체 보기 전환"
+                            onDoubleClick={() => {
+                              setFocusedTherapistSlot((prev) => (prev === ci ? null : ci));
+                            }}
+                          >
+                            {getTherapistNameForDate(ci, dayInfo.day, dayInfo) || `치료사${ci + 1}`}
                           </div>
                         );
                       })}
                     </div>
                     {/* 열 리사이즈 핸들 오버레이 */}
-                    {colCount > 1 && Array.from({ length: colCount - 1 }, (_, ci) => {
+                    {!isSingleTherapistFocused && colCount > 1 && Array.from({ length: colCount - 1 }, (_, ci) => {
                       const ratios = activeColRatios || Array(colCount).fill(1);
                       const totalR = ratios.reduce((a, b) => a + b, 0);
                       const leftPct = ratios.slice(0, ci + 1).reduce((a, b) => a + b, 0) / totalR * 100;
@@ -2529,7 +2624,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
 
                       // 2. Cells
                       // 높이가 10px 이하일 때 내용이 있는 단일 셀을 아래 행까지 시각적으로 확장하기 위한 추적
-                      for (let colIdx = 0; colIdx < colCount; colIdx++) {
+                      for (let visibleColIdx = 0; visibleColIdx < visibleTherapistSlots.length; visibleColIdx++) {
+                        const colIdx = visibleTherapistSlots[visibleColIdx];
                         // 위 셀이 이 행으로 확장됐으면 렌더링 생략
                         const overflowKey = `${weekIdx}-${dayIdx}-${rowIdx}-${colIdx}`;
                         if (compactOverflowCols.has(overflowKey)) {
@@ -2588,7 +2684,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             compactOverflowCols,
                           });
 
-                          const finalMergeSpan = { ...mergeSpan, rowSpan: visualRowSpan };
+                          const finalMergeSpan = {
+                            ...mergeSpan,
+                            rowSpan: visualRowSpan,
+                            colSpan: isSingleTherapistFocused ? 1 : mergeSpan.colSpan,
+                          };
 
                           // overrideVisitSuffix 계산
                           let overrideVisitSuffix = undefined;
@@ -2603,7 +2703,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                           }
 
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
-                          const therapistName = getTherapistNameForDate(colIdx, dayInfo.day) || '';
+                          const therapistName = getTherapistNameForDate(colIdx, dayInfo.day, dayInfo) || '';
                           let workState = getTherapistWorkState(dateKey, therapistName);
                           if (workState === 'early-leave' && isLastHourSlot(dayInfo, slotInfo.time)) {
                             workState = 'off';
@@ -2615,8 +2715,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                               key={key}
                               cellKey={key}
                               weekIdx={weekIdx} dayIdx={dayIdx} rowIdx={rowIdx} colIdx={colIdx}
+                              displayColIdx={visibleColIdx}
                               dayInfo={dayInfo} slotInfo={slotInfo} showTimeCol={showTimeCol}
-                              gridRowStart={gridRowStart} isLastRenderedRow={isLastRenderedRow} colCount={colCount}
+                              gridRowStart={gridRowStart} isLastRenderedRow={isLastRenderedRow} colCount={visibleTherapistSlots.length}
                               cellData={displayCellData} pendingContent={content} pendingMergeSpan={pendingMergeSpans[key]} mergeSpan={finalMergeSpan}
                               editingCell={editingCell} imePreviewCell={imePreviewCell}
                               selectedKeys={selectedKeys} selectedCell={selectedCell} clipboardSource={clipboardSource}
@@ -2647,10 +2748,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                     <div
                       className={`sw-day-resize-handle${dayIdx === weekDays.length - 1 ? ' mobile-final-day-resize' : ''}`}
                       onMouseDown={(e) => {
-                        startDayResize(e, showTimeCol);
+                        startDayResize(e, showTimeCol, { focusedMode: isSingleTherapistFocused });
                       }}
                       onTouchStart={(e) => {
-                        startDayResize(e, showTimeCol);
+                        startDayResize(e, showTimeCol, { focusedMode: isSingleTherapistFocused });
                       }}
                     />
                   )}
@@ -2670,8 +2771,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
         </div>
         );
       }), [
-        weeks, dayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
-        therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
+        weeks, effectiveDayColWidth, todayWeekIdx, today, getTimeSlotsForDay,
+        visibleTherapistColsCSS, colCount, visibleTherapistSlots, isSingleTherapistFocused, getTherapistNameForDate, activeColRatios,
         startColResize, startDayResize, startRowResize,
         renderMemos, pendingDisplayValues, pendingMergeSpans, pendingCellBgColors, editingCell, imePreviewCell,
         selectedKeys, selectedCell, clipboardSource,
@@ -2707,11 +2808,11 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               ? { ...baseMemo, ...contextMenu.memoSnapshot } 
               : baseMemo;
             const currentPrescription = currentMemo?.prescription || '';
-            const shockwavePrescriptions = Array.isArray(settings?.prescriptions)
-              ? settings.prescriptions.filter(Boolean)
+            const shockwavePrescriptions = Array.isArray(shockwaveMergeSettings?.prescriptions)
+              ? shockwaveMergeSettings.prescriptions.filter(Boolean)
               : [];
-            const manualTherapyPrescriptions = Array.isArray(settings?.manual_therapy_prescriptions)
-              ? settings.manual_therapy_prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres))
+            const manualTherapyPrescriptions = Array.isArray(manualTherapyMergeSettings?.prescriptions)
+              ? manualTherapyMergeSettings.prescriptions.filter((pres) => pres && !shockwavePrescriptions.includes(pres))
               : [];
             const currentPrescriptionClass = shockwavePrescriptions.includes(currentPrescription)
               ? ' is-shockwave'

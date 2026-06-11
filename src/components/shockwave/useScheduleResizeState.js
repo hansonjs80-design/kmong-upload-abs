@@ -11,8 +11,10 @@ import {
 const MIN_SCHEDULE_ROW_HEIGHT = 5;
 const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_SCHEDULE_DAY_WIDTH_MOBILE = 70;
+const MIN_FOCUSED_DAY_WIDTH = 138;
 const MIN_COL_RATIO = 0.2;
 const MOBILE_RESIZE_LOCK_KEY = 'clinic-schedule-mobile-resize-locked';
+const FOCUSED_DAY_COL_WIDTH_KEY = 'clinic-schedule-focused-day-col-width';
 
 const getPointerClient = (event) => {
   const touch = event.touches?.[0] || event.changedTouches?.[0];
@@ -60,6 +62,7 @@ const maybeLockMobileResize = (event) => {
 export default function useScheduleResizeState({ colCount }) {
   const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
   const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
+  const [focusedDayColWidth, setFocusedDayColWidth] = usePersistentNumber(FOCUSED_DAY_COL_WIDTH_KEY, 0);
   const [rowHeight, setRowHeight] = usePersistentNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23, MIN_SCHEDULE_ROW_HEIGHT);
 
   const colResizeRef = useRef({ active: false, colIdx: -1, startX: 0, startRatios: [], containerWidth: 0 });
@@ -184,30 +187,33 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('blur', onUp);
   }, [colCount, setColRatios]);
 
-  const startDayResize = useCallback((event, showTimeCol) => {
+  const startDayResize = useCallback((event, showTimeCol, options = {}) => {
     event.preventDefault();
     event.stopPropagation();
     if (!shouldStartMobileResize(event)) return;
+    const focusedMode = options?.focusedMode === true;
+    const activeMinWidth = focusedMode ? MIN_FOCUSED_DAY_WIDTH : getMinScheduleDayWidth(event);
+    const setActiveDayWidth = focusedMode ? setFocusedDayColWidth : setDayColWidth;
+    const activeStoredWidth = focusedMode ? focusedDayColWidth : dayColWidth;
     const startPoint = getPointerClient(event);
-    const minDayWidth = getMinScheduleDayWidth(event);
     const dayElement = event.currentTarget.closest('.shockwave-day');
-    const currentDayWidth = dayElement?.getBoundingClientRect().width || minDayWidth;
+    const currentDayWidth = dayElement?.getBoundingClientRect().width || activeMinWidth;
     const normalizedDayWidth = showTimeCol
-      ? Math.max(minDayWidth, currentDayWidth - TIME_COL_WIDTH)
+      ? Math.max(activeMinWidth, currentDayWidth - TIME_COL_WIDTH)
       : currentDayWidth;
     dayResizeRef.current = { active: true, startX: startPoint.x };
-    let latestWidth = dayColWidth || normalizedDayWidth;
+    let latestWidth = activeStoredWidth || normalizedDayWidth;
     const onMove = (moveEvent) => {
       moveEvent.preventDefault?.();
       if (!dayResizeRef.current.active) return;
       const point = getPointerClient(moveEvent);
       const delta = point.x - dayResizeRef.current.startX;
-      latestWidth = Math.max(minDayWidth, normalizedDayWidth + delta);
-      setDayColWidth(latestWidth);
+      latestWidth = Math.max(activeMinWidth, normalizedDayWidth + delta);
+      setActiveDayWidth(latestWidth);
     };
     const onUp = (upEvent) => {
       dayResizeRef.current.active = false;
-      setDayColWidth(latestWidth); // Final write
+      setActiveDayWidth(latestWidth); // Final write
       maybeLockMobileResize(upEvent);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
@@ -222,11 +228,12 @@ export default function useScheduleResizeState({ colCount }) {
     window.addEventListener('touchend', onUp);
     window.addEventListener('touchcancel', onUp);
     window.addEventListener('blur', onUp);
-  }, [dayColWidth, setDayColWidth]);
+  }, [dayColWidth, focusedDayColWidth, setDayColWidth, setFocusedDayColWidth]);
 
   return {
     activeColRatios,
     dayColWidth,
+    focusedDayColWidth,
     rowHeight,
     startColResize,
     startDayResize,

@@ -225,6 +225,7 @@
 
 .shockwave-week-floating-actions--right {
   right: 8px;
+  display: none;
 }
 
 .shockwave-week-floating-actions .shockwave-week-today-btn,
@@ -312,19 +313,60 @@
 
 .sw-day-header-cell {
   grid-column: 1 / -1;
+  position: relative;
+  padding-left: 3px;
+  padding-right: 3px;
 }
 
 .sw-day-header-cell.with-week-col {
   grid-column: 2 / -1;
 }
 
+.sw-day-header-settings-btn {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  z-index: 4;
+}
+
+.sw-day-header-settings-btn:hover {
+  color: var(--brand-primary);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.sw-day-header-settings-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
 .sw-day-header-label {
-  display: inline-block;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
-  max-width: 100%;
+  width: 100%;
+  max-width: none;
+  padding: 0 26px;
   overflow: hidden;
   text-overflow: clip;
   white-space: nowrap;
+  text-align: center;
+  pointer-events: none;
 }
 
 .sw-day-header-label--mobile {
@@ -377,9 +419,17 @@
   align-items: center;
   justify-content: center;
   height: 100%;
+  cursor: pointer;
+  user-select: none;
 }
 
 .sw-therapist-name:last-child { border-right: none; }
+
+.sw-therapist-name.focused-single {
+  cursor: pointer;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
 
 .sw-therapist-name.holiday {
   background: var(--sw-holiday-name);
@@ -1017,7 +1067,7 @@
   .sw-cell { font-size: var(--sw-cell-font-size); }
   .sw-day-header-cell { font-size: 0.68rem; padding: 6px 2px; }
   .sw-day-header-label--desktop { display: none; }
-  .sw-day-header-label--mobile { display: inline-block; }
+  .sw-day-header-label--mobile { display: flex; }
   .sw-therapist-name { font-size: 0.62rem; padding: 4px 2px; }
 }
 

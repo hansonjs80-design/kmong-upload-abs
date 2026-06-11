@@ -16,16 +16,27 @@ export default function useStaffScheduleState({
   staffMemos,
   therapists,
 }) {
-  const getTherapistNameForDate = useCallback((slotIndex, day) => {
+  const getTherapistNameForDate = useCallback((slotIndex, day, dateInfo = null) => {
     if (!monthlyTherapists || monthlyTherapists.length === 0) {
       return therapists[slotIndex]?.name || '';
     }
+    const targetYear = Number(dateInfo?.year || currentYear);
+    const targetMonth = Number(dateInfo?.month || currentMonth);
+    const hasDatedRows = monthlyTherapists.some((therapist) => (
+      Number.isFinite(Number(therapist?.year)) && Number.isFinite(Number(therapist?.month))
+    ));
     const match = monthlyTherapists.find(
-      (therapist) => therapist.slot_index === slotIndex && day >= therapist.start_day && day <= therapist.end_day
+      (therapist) => {
+        if (Number(therapist?.slot_index) !== Number(slotIndex)) return false;
+        if (hasDatedRows && Number.isFinite(Number(therapist?.year)) && Number.isFinite(Number(therapist?.month))) {
+          if (Number(therapist.year) !== targetYear || Number(therapist.month) !== targetMonth) return false;
+        }
+        return day >= therapist.start_day && day <= therapist.end_day;
+      }
     );
     if (match !== undefined) return match.therapist_name || '';
     return therapists[slotIndex]?.name || '';
-  }, [monthlyTherapists, therapists]);
+  }, [currentMonth, currentYear, monthlyTherapists, therapists]);
 
   const normalizeStaffBlockKeyword = useCallback((value) => normalizeStaffScheduleRuleText(value), []);
   const effectiveStaffBlockRules = useMemo(
@@ -84,9 +95,9 @@ export default function useStaffScheduleState({
     ));
     if (rules.length === 0) return map;
 
-    const getCurrentTherapistNames = (day) => (
+    const getCurrentTherapistNames = (day, dateInfo = null) => (
       Array.from({ length: colCount }, (_, slotIndex) => (
-        normalizeNameForMatch(getTherapistNameForDate(slotIndex, day))
+        normalizeNameForMatch(getTherapistNameForDate(slotIndex, day, dateInfo))
       )).filter(Boolean)
     );
 
@@ -102,7 +113,8 @@ export default function useStaffScheduleState({
       const slashIndex = text.indexOf('/');
 
       const day = Number(item.day);
-      const currentTherapistNames = getCurrentTherapistNames(day);
+      const dateInfo = { year: item.year, month: item.month, day };
+      const currentTherapistNames = getCurrentTherapistNames(day, dateInfo);
       const prefix = slashIndex >= 0 ? text.slice(0, slashIndex).trim() : text;
       const normalizedPrefix = normalizeStaffBlockKeyword(prefix);
       const normalizedText = normalizeStaffBlockKeyword(text);

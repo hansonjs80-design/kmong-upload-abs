@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../components/common/Toast';
 import { syncTodayManualTherapyScheduleToStats, syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
-import { appendLogTherapists, buildDisplayTherapists } from '../lib/therapistDisplayUtils';
+import { appendLogTherapists, applyTherapistNameOrder, buildDisplayTherapists } from '../lib/therapistDisplayUtils';
 import { GridSkeleton, SettlementSkeleton } from '../components/common/LoadingSkeleton';
 import ShockwaveDataGrid from '../components/shockwave/ShockwaveDataGrid';
 import ShockwaveNewPatientsView from '../components/shockwave/ShockwaveNewPatientsView';
@@ -65,10 +65,8 @@ export default function ManualTherapyStatsPage() {
   const {
     currentYear,
     currentMonth,
-    manualTherapists,
     therapists,
     monthlyTherapists,
-    loadManualTherapists,
     loadTherapists,
     shockwaveMemos,
     loadShockwaveMemos,
@@ -86,10 +84,13 @@ export default function ManualTherapyStatsPage() {
   const [isScheduleLoading, setIsScheduleLoading] = useState(false);
   const isLoading = isLogsLoading || isScheduleLoading;
   const [extraDraftRows, setExtraDraftRows] = useState(0);
-  const [localMonthlyTherapists, setLocalMonthlyTherapists] = useState(null);
   const lastAutoSyncKeyRef = useRef(null);
   const scheduleReloadRequestRef = useRef(0);
   const logsLoadedKeyRef = useRef('');
+  const shockwaveMemosRef = useRef(shockwaveMemos);
+  const scheduleTherapistsRef = useRef([]);
+  const monthlyTherapistsRef = useRef([]);
+  const prescriptionsRef = useRef([]);
 
   useEffect(() => {
     if (!canManageStatsSettings && activeSection === 'settings') {
@@ -97,30 +98,15 @@ export default function ManualTherapyStatsPage() {
     }
   }, [activeSection, canManageStatsSettings]);
 
-  // 연월 변경 시 로컬 치료사 목록을 즉시 초기화
-  const currentMonthKey = useMemo(() => `${currentYear}-${currentMonth}`, [currentYear, currentMonth]);
-  useEffect(() => {
-    setLocalMonthlyTherapists(null);
-  }, [currentMonthKey]);
-
-  const monthlyManualTherapists = useMemo(
-    () => (Array.isArray(localMonthlyTherapists) ? localMonthlyTherapists : []),
-    [localMonthlyTherapists]
-  );
-  const monthlyTherapistsReady = Array.isArray(localMonthlyTherapists);
-
-  const safeTherapists = useMemo(
-    () => (Array.isArray(manualTherapists) ? manualTherapists.filter(Boolean) : []),
-    [manualTherapists]
-  );
   const scheduleTherapists = useMemo(
     () => (Array.isArray(therapists) ? therapists.filter(Boolean) : []),
     [therapists]
   );
-  const displayBaseTherapists = useMemo(
-    () => (monthlyTherapistsReady ? safeTherapists : []),
-    [monthlyTherapistsReady, safeTherapists]
+  const scheduleDisplayTherapists = useMemo(
+    () => buildDisplayTherapists(scheduleTherapists, monthlyTherapists),
+    [scheduleTherapists, monthlyTherapists]
   );
+  const displayBaseTherapists = useMemo(() => [], []);
   const effectiveSettlementSettings = useMemo(
     () => getEffectiveSettlementSettings(shockwaveSettings, currentYear, currentMonth, 'manual_therapy'),
     [shockwaveSettings, currentYear, currentMonth]
@@ -130,10 +116,40 @@ export default function ManualTherapyStatsPage() {
     [effectiveSettlementSettings]
   );
 
+  useEffect(() => {
+    shockwaveMemosRef.current = shockwaveMemos;
+  }, [shockwaveMemos]);
+
+  useEffect(() => {
+    scheduleTherapistsRef.current = scheduleTherapists;
+  }, [scheduleTherapists]);
+
+  useEffect(() => {
+    monthlyTherapistsRef.current = monthlyTherapists;
+  }, [monthlyTherapists]);
+
+  useEffect(() => {
+    prescriptionsRef.current = prescriptions;
+  }, [prescriptions]);
+
   // Therapist filter state (lifted from ShockwaveDataGrid)
+  const availableTherapists = useMemo(
+    () => appendLogTherapists(scheduleDisplayTherapists, logs),
+    [scheduleDisplayTherapists, logs]
+  );
+  const logTherapists = useMemo(
+    () => appendLogTherapists(displayBaseTherapists, logs),
+    [displayBaseTherapists, logs]
+  );
   const displayTherapists = useMemo(
-    () => appendLogTherapists(buildDisplayTherapists(displayBaseTherapists, monthlyManualTherapists), logs),
-    [displayBaseTherapists, monthlyManualTherapists, logs]
+    () => {
+      const configuredNames = effectiveSettlementSettings?.therapist_names || [];
+      if (configuredNames.length > 0) {
+        return applyTherapistNameOrder(availableTherapists, configuredNames);
+      }
+      return logTherapists;
+    },
+    [availableTherapists, effectiveSettlementSettings?.therapist_names, logTherapists]
   );
   const therapistNameList = useMemo(
     () => displayTherapists.map((t) => t.name).filter(Boolean),
@@ -146,9 +162,8 @@ export default function ManualTherapyStatsPage() {
   const fetchIdRef = useRef(0);
   const [selectedTherapistNames, setSelectedTherapistNames] = useState([]);
   useEffect(() => {
-    if (!monthlyTherapistsReady) return;
     setSelectedTherapistNames(therapistNameList);
-  }, [monthlyTherapistsReady, therapistNameKey, therapistNameList]);
+  }, [therapistNameKey, therapistNameList]);
   const selectedTherapistSet = useMemo(
     () => new Set(selectedTherapistNames),
     [selectedTherapistNames]
@@ -185,8 +200,8 @@ export default function ManualTherapyStatsPage() {
       if (error) throw error;
       if (currentFetchId !== fetchIdRef.current) return [];
       logsLoadedKeyRef.current = monthKey;
-      const normalizedLogs = normalizeManualTherapyLogRows(data, prescriptions, {
-        memos: memosOverride || shockwaveMemos,
+      const normalizedLogs = normalizeManualTherapyLogRows(data, prescriptionsRef.current, {
+        memos: memosOverride || shockwaveMemosRef.current,
         year: currentYear,
         month: currentMonth,
       });
@@ -203,27 +218,18 @@ export default function ManualTherapyStatsPage() {
         setIsLogsLoading(false);
       }
     }
-  }, [addToast, currentMonth, currentYear, prescriptions, shockwaveMemos]);
+  }, [addToast, currentMonth, currentYear]);
 
   useEffect(() => {
-    loadManualTherapists();
     loadTherapists();
     loadShockwaveSettings();
-  }, [loadManualTherapists, loadTherapists, loadShockwaveSettings]);
+  }, [loadTherapists, loadShockwaveSettings]);
 
   const reloadScheduleData = useCallback(async ({ force = false } = {}) => {
     const requestId = ++scheduleReloadRequestRef.current;
     setIsScheduleLoading(true);
     try {
-      const [loadedMonthlyTherapists, loadedScheduleMonthlyTherapists] = await Promise.all([
-        loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
-        loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
-      ]);
-      if (scheduleReloadRequestRef.current === requestId) {
-        if (Array.isArray(loadedMonthlyTherapists)) {
-          setLocalMonthlyTherapists(loadedMonthlyTherapists);
-        }
-      }
+      const loadedScheduleMonthlyTherapists = await loadMonthlyTherapists(currentYear, currentMonth, 'shockwave');
       const loadedMemos = await loadShockwaveMemos(currentYear, currentMonth, { force });
       return { memos: loadedMemos, monthlyTherapists: loadedScheduleMonthlyTherapists || monthlyTherapists, therapists: scheduleTherapists };
     } finally {
@@ -244,15 +250,9 @@ export default function ManualTherapyStatsPage() {
 
     (async () => {
       try {
-        // 1. 월별 치료사 데이터 로드
-        const [loadedMonthlyTherapists, loadedScheduleMonthlyTherapists] = await Promise.all([
-          loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
-          loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
-        ]);
+        // 1. 스케줄 헤더용 치료사 데이터 로드
+        const loadedScheduleMonthlyTherapists = await loadMonthlyTherapists(currentYear, currentMonth, 'shockwave');
         if (!active || scheduleReloadRequestRef.current !== requestId) return;
-        if (Array.isArray(loadedMonthlyTherapists)) {
-          setLocalMonthlyTherapists(loadedMonthlyTherapists);
-        }
 
         // 2. 스케줄 메모 데이터 로드
         const loadedMemos = await loadShockwaveMemos(currentYear, currentMonth);
@@ -263,10 +263,10 @@ export default function ManualTherapyStatsPage() {
           year: currentYear,
           month: currentMonth,
           memos: loadedMemos || {},
-          therapists: scheduleTherapists,
-          monthlyTherapists: loadedScheduleMonthlyTherapists || monthlyTherapists,
+          therapists: scheduleTherapistsRef.current,
+          monthlyTherapists: loadedScheduleMonthlyTherapists || monthlyTherapistsRef.current,
           upToToday: true,
-          manualTherapyPrescriptions: prescriptions,
+          manualTherapyPrescriptions: prescriptionsRef.current,
         });
 
         // 4. 동기화 완료 후 최신 도수치료 로그 조회
@@ -285,7 +285,7 @@ export default function ManualTherapyStatsPage() {
     return () => {
       active = false;
     };
-  }, [currentMonth, currentYear, loadShockwaveMemos, loadMonthlyTherapists, scheduleTherapists, monthlyTherapists, prescriptions, fetchLogs]);
+  }, [currentMonth, currentYear, loadShockwaveMemos, loadMonthlyTherapists, fetchLogs]);
 
   // 탭이 다시 보일 때 (visibility change) 자동으로 데이터 갱신
   useEffect(() => {
@@ -313,7 +313,7 @@ export default function ManualTherapyStatsPage() {
         month: currentMonth,
         memos: reloaded?.memos || shockwaveMemos,
         therapists: latestTherapists,
-        monthlyTherapists: reloaded?.monthlyTherapists || monthlyManualTherapists,
+        monthlyTherapists: reloaded?.monthlyTherapists || monthlyTherapists,
         upToToday: true,
         manualTherapyPrescriptions: prescriptions,
       });
@@ -325,7 +325,7 @@ export default function ManualTherapyStatsPage() {
     } finally {
       setIsReloading(false);
     }
-  }, [reloadScheduleData, currentYear, currentMonth, shockwaveMemos, scheduleTherapists, monthlyManualTherapists, prescriptions, fetchLogs, addToast]);
+  }, [reloadScheduleData, currentYear, currentMonth, shockwaveMemos, scheduleTherapists, monthlyTherapists, prescriptions, fetchLogs, addToast]);
 
   // 연월 변경 시의 로그 초기화 및 데이터 로드는 위 통합된 useEffect에서 자동으로 처리됩니다.
 
@@ -632,8 +632,8 @@ export default function ManualTherapyStatsPage() {
                         <div className="sw-grid-card-table">
                           <ShockwaveDataGrid
                             logs={logs}
-                            therapists={displayBaseTherapists}
-                            monthlyTherapists={monthlyManualTherapists}
+                            therapists={displayTherapists}
+                            monthlyTherapists={[]}
                             currentYear={currentYear}
                             currentMonth={currentMonth}
                             fetchLogs={fetchLogs}
@@ -678,8 +678,8 @@ export default function ManualTherapyStatsPage() {
                         <ManualTherapyStatsView
                           currentMonth={currentMonth}
                           logs={logs}
-                          therapists={displayBaseTherapists}
-                          monthlyTherapists={monthlyManualTherapists}
+                          therapists={displayTherapists}
+                          monthlyTherapists={[]}
                           prescriptions={prescriptions}
                           incentivePercentage={effectiveSettlementSettings.incentive_percentage}
                           prescriptionPrices={effectiveSettlementSettings.prescription_prices}
@@ -688,7 +688,6 @@ export default function ManualTherapyStatsPage() {
                         <ManualTherapySixMonthStats
                           currentYear={currentYear}
                           currentMonth={currentMonth}
-                          therapists={displayBaseTherapists}
                           settings={shockwaveSettings}
                           selectedTherapistNames={selectedTherapistNames}
                         />
@@ -702,10 +701,10 @@ export default function ManualTherapyStatsPage() {
             <div className="sw-stats-body sw-stats-body--settlement fade-transition-wrapper">
               <ShockwaveNewPatientsView
                 logs={logs}
-                therapists={displayBaseTherapists}
+                therapists={displayTherapists}
                 currentMonth={currentMonth}
                 title={`${currentMonth}월 도수치료 신규환자`}
-                monthlyTherapists={monthlyManualTherapists}
+                monthlyTherapists={[]}
                 selectedTherapistNames={selectedTherapistNames}
               />
             </div>
@@ -718,6 +717,7 @@ export default function ManualTherapyStatsPage() {
                   month={currentMonth}
                   settings={shockwaveSettings}
                   effectiveSettings={effectiveSettlementSettings}
+                  therapistOptions={availableTherapists}
                   onSave={handleSaveSettlementSettings}
                 />
               )}

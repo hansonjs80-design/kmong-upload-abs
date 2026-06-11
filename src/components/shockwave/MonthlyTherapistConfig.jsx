@@ -25,7 +25,7 @@ import {
 
 /**
  * 월별 치료사 설정 모달
- * - 충격파 / 도수치료 탭 분리
+ * - 스케줄 헤더용 단일 치료사 목록
  * - 슬롯(열) 번호별로 날짜 범위 + 치료사 이름 설정
  * - 같은 슬롯에 여러 기간을 분할 설정 가능
  * - 빈 이름 = 해당 기간 비활성
@@ -33,10 +33,8 @@ import {
 export default function MonthlyTherapistConfig({
   year,
   month,
-  therapists,              // 충격파 기본 치료사 목록
-  manualTherapists,        // 도수치료 기본 치료사 목록
-  monthlyTherapists,       // 현재 월별 충격파 설정
-  monthlyManualTherapists, // 현재 월별 도수치료 설정
+  therapists,              // 기본 치료사 목록
+  monthlyTherapists,       // 현재 월별 치료사 설정
   onSave,                  // (year, month, configs, type) => Promise<boolean>
   onSaveRoster,            // (type, roster) => Promise<boolean>
   settings,
@@ -44,14 +42,11 @@ export default function MonthlyTherapistConfig({
   onClose,
 }) {
   const [configSection, setConfigSection] = useState('therapists'); // therapists | weekly | dates | staffBlocks | textStyle
-  const [activeTab, setActiveTab] = useState('shockwave'); // 'shockwave' | 'manual_therapy'
 
-  const currentTherapists = activeTab === 'manual_therapy' ? manualTherapists : therapists;
+  const currentTherapists = therapists;
   const lastDay = new Date(year, month, 0).getDate();
 
-  // 탭별 로컬 편집 상태
-  const [shockwaveSlots, setShockwaveSlots] = useState(null);
-  const [manualSlots, setManualSlots] = useState(null);
+  const [therapistSlots, setTherapistSlots] = useState(null);
   const [dayOverrides, setDayOverrides] = useState({});
   const [dateOverrides, setDateOverrides] = useState({});
   const [staffBlockRules, setStaffBlockRules] = useState([]);
@@ -106,19 +101,13 @@ export default function MonthlyTherapistConfig({
 
   // 초기화
   useEffect(() => {
-    if (!shockwaveSlots) {
-      setShockwaveSlots(buildSlots(therapists, monthlyTherapists));
+    if (!therapistSlots) {
+      setTherapistSlots(buildSlots(therapists, monthlyTherapists));
     }
-  }, [therapists, monthlyTherapists, buildSlots, shockwaveSlots]);
+  }, [therapists, monthlyTherapists, buildSlots, therapistSlots]);
 
-  useEffect(() => {
-    if (!manualSlots) {
-      setManualSlots(buildSlots(manualTherapists, monthlyManualTherapists));
-    }
-  }, [manualTherapists, monthlyManualTherapists, buildSlots, manualSlots]);
-
-  const slots = activeTab === 'manual_therapy' ? manualSlots : shockwaveSlots;
-  const setSlots = activeTab === 'manual_therapy' ? setManualSlots : setShockwaveSlots;
+  const slots = therapistSlots;
+  const setSlots = setTherapistSlots;
   const slotIndexes = useMemo(
     () => Object.keys(slots || {}).map(Number).sort((a, b) => a - b),
     [slots]
@@ -338,11 +327,11 @@ export default function MonthlyTherapistConfig({
       });
     });
 
-    const rosterSuccess = onSaveRoster ? await onSaveRoster(activeTab, roster) : true;
-    const success = rosterSuccess && await onSave(year, month, configs, activeTab);
+    const rosterSuccess = onSaveRoster ? await onSaveRoster('shockwave', roster) : true;
+    const success = rosterSuccess && await onSave(year, month, configs, 'shockwave');
     setSaving(false);
     if (success) onClose();
-  }, [slots, currentTherapists, onSaveRoster, onSave, onClose, year, month, activeTab]);
+  }, [slots, currentTherapists, onSaveRoster, onSave, onClose, year, month]);
 
   const handleSaveOperatingSettings = useCallback(async () => {
     if (!onSaveSettings || !settings) return;
@@ -451,25 +440,8 @@ export default function MonthlyTherapistConfig({
 
   const renderTherapistSettings = () => (
     <>
-      <div className="monthly-therapist-tabs">
-        <button
-          type="button"
-          className={`monthly-therapist-tab${activeTab === 'shockwave' ? ' active' : ''}`}
-          onClick={() => setActiveTab('shockwave')}
-        >
-          충격파 통계
-        </button>
-        <button
-          type="button"
-          className={`monthly-therapist-tab${activeTab === 'manual_therapy' ? ' active' : ''}`}
-          onClick={() => setActiveTab('manual_therapy')}
-        >
-          도수치료 통계
-        </button>
-      </div>
-
       <div className="monthly-therapist-desc">
-        스케줄 테이블 헤더 이름과 통계에 반영되는 치료사 이름을 함께 관리합니다. 스케줄에 입력된 처방의 치료사는 통계에 자동 포함됩니다.
+        스케줄 테이블 헤더에 표시할 치료사 이름을 관리합니다. 통계는 셀에 저장된 처방 종류에 따라 충격파/도수치료 현황에 자동 반영됩니다.
       </div>
 
       <div className="monthly-therapist-toolbar">
@@ -481,7 +453,7 @@ export default function MonthlyTherapistConfig({
 
       <div className="monthly-therapist-body">
         {slotIndexes.map((slotIndex) => (
-          <div key={`${activeTab}-${slotIndex}`} className="monthly-therapist-slot">
+          <div key={`therapist-${slotIndex}`} className="monthly-therapist-slot">
             <div className="monthly-therapist-slot-header">
               <span className="monthly-therapist-slot-badge">{slotIndex + 1}번</span>
               <span className="monthly-therapist-slot-default">

@@ -4,6 +4,7 @@ import { generateShockwaveCalendar, buildCrossMonthMirroredPayloads } from '../l
 import { syncTodayShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
 import { syncTodayManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
 import { normalizeStaffDeptNameSpacing } from '../lib/staffMemoFormatUtils';
+import { inheritMonthlyTherapistsFromPreviousRows } from '../lib/monthlyTherapistInheritanceUtils';
 import {
   applyShockwaveMemoStateUpdate,
   buildOptimisticShockwaveMemos,
@@ -1158,7 +1159,6 @@ export function ScheduleProvider({ children }) {
       }
 
       // 해당 월 데이터 없음 → 가장 최근 이전 월 설정을 상속 (최근 12개월만 스캔)
-      const currentValue = year * 12 + month;
       const lookbackYear = month <= 12 ? year - 1 : year;
       const { data: previousRows, error: prevError } = await supabase
         .from('shockwave_monthly_therapists')
@@ -1171,38 +1171,11 @@ export function ScheduleProvider({ children }) {
         .order('start_day')
         .limit(50);
 
-      const previousMonths = (previousRows || []).filter((item) => {
-        const itemYear = Number(item.year);
-        const itemMonth = Number(item.month);
-        return itemYear * 12 + itemMonth < currentValue;
-      });
-      const inheritedValue = previousMonths.reduce((max, item) => {
-        const value = Number(item.year) * 12 + Number(item.month);
-        return Math.max(max, value);
-      }, -Infinity);
-      const prevData = previousMonths.filter((item) => {
-        const value = Number(item.year) * 12 + Number(item.month);
-        return value === inheritedValue;
-      });
+      const inherited = !prevError
+        ? inheritMonthlyTherapistsFromPreviousRows(previousRows, year, month, type)
+        : [];
 
-      if (!prevError && prevData.length > 0) {
-        const slotMap = new Map();
-        prevData.forEach((item) => {
-          const existing = slotMap.get(item.slot_index);
-          if (!existing || item.start_day > existing.start_day) {
-            slotMap.set(item.slot_index, item);
-          }
-        });
-        const lastDay = new Date(year, month, 0).getDate();
-        const inherited = Array.from(slotMap.values()).map((item) => ({
-          slot_index: item.slot_index,
-          therapist_name: item.therapist_name,
-          start_day: 1,
-          end_day: lastDay,
-          year,
-          month,
-          type,
-        }));
+      if (inherited.length > 0) {
         applyIfLatest(inherited);
         return inherited;
       }

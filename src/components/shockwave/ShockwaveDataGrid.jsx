@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffe
 /* eslint-disable react-hooks/exhaustive-deps */
 import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
-import { appendLogTherapists, buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { appendLogTherapists, applyTherapistNameOrder, buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useToast } from '../common/Toast';
@@ -124,9 +124,15 @@ export default function ShockwaveDataGrid({
     return safeInputLogs.filter((log) => selectedTherapistSet.has(log?.therapist_name));
   }, [isAllTherapistsSelected, safeInputLogs, selectedTherapistSet]);
   const visibleTherapists = useMemo(() => {
+    const selectedNames = Array.isArray(selectedTherapistNames)
+      ? selectedTherapistNames.map((name) => String(name || '').trim()).filter(Boolean)
+      : [];
+    if (selectedNames.length > 0) {
+      return applyTherapistNameOrder(displayTherapists, selectedNames);
+    }
     if (isAllTherapistsSelected || selectedTherapistSet.size === 0) return displayTherapists;
     return displayTherapists.filter((therapist) => selectedTherapistSet.has(therapist.name));
-  }, [displayTherapists, isAllTherapistsSelected, selectedTherapistSet]);
+  }, [displayTherapists, isAllTherapistsSelected, selectedTherapistNames, selectedTherapistSet]);
   const prescriptions = useMemo(() => {
     const source = prescriptionsProp || settings?.prescriptions || ['F1.5', 'F/Rdc', 'F/R'];
     return Array.isArray(source) ? source.filter(Boolean) : ['F1.5', 'F/Rdc', 'F/R'];
@@ -1591,6 +1597,14 @@ export default function ShockwaveDataGrid({
                       <span className="sw-grid-count-value">{val}</span>
                     </div>
                   );
+                }
+                if (
+                  ci < FIXED_FIELDS.length &&
+                  FIXED_FIELDS[ci]?.field === 'visit_count' &&
+                  (displayVal === '' || displayVal == null) &&
+                  String(row?.patient_name || '').includes('*')
+                ) {
+                  displayVal = '1';
                 }
 
                 const cellStyle = {

@@ -144,6 +144,13 @@ export default function useScheduleKeyboardActions({
     editingCell,
   });
 
+  const getVisitOnlyContent = useCallback((visitInput) => {
+    if (!visitInput) return '';
+    if (visitInput === '-') return '(-)';
+    if (visitInput === '*') return '*';
+    return `(${visitInput})`;
+  }, []);
+
   const updateOpenContextMenuSnapshotFromPayload = useCallback((payload = []) => {
     if (!contextMenu || !setContextMenu) return;
     const contextKey = cellKey(contextMenu.weekIdx, contextMenu.dayIdx, contextMenu.rowIdx, contextMenu.colIdx);
@@ -374,10 +381,14 @@ export default function useScheduleKeyboardActions({
     event.stopImmediatePropagation?.();
 
     const isManualTherapy = Boolean(manualPrescription);
-    const autoTagMatch = isManualTherapy ? targetPrescription.match(/(\d{2,3})/) : null;
-    const doseTag = isManualTherapy
-      ? effectiveManualSettings?.dose_tags?.[targetPrescription] || shockwaveSettings?.manual_therapy_dose_tags?.[targetPrescription] || (autoTagMatch ? autoTagMatch[1] : '')
-      : '';
+    const effectiveTreatmentSettings = isManualTherapy ? effectiveManualSettings : effectiveShockwaveSettings;
+    const autoTagMatch = targetPrescription.match(/(\d{2,3})/);
+    const fallbackDoseTags = isManualTherapy
+      ? shockwaveSettings?.manual_therapy_dose_tags
+      : shockwaveSettings?.shockwave_dose_tags;
+    const doseTag = effectiveTreatmentSettings?.dose_tags?.[targetPrescription]
+      ?? fallbackDoseTags?.[targetPrescription]
+      ?? (isManualTherapy && autoTagMatch ? autoTagMatch[1] : '');
     const rawSelected = selectedKeysRef.current && selectedKeysRef.current.size > 0
       ? selectedKeysRef.current
       : new Set([cellKey(selectedCell.w, selectedCell.d, selectedCell.r, selectedCell.c)]);
@@ -795,17 +806,70 @@ export default function useScheduleKeyboardActions({
       const latestPending = pendingRef.current;
       const saveMemo = onSaveMemoRef.current;
 
-      const displayUpdates = keys.map(key => {
+      const displayUpdates = [];
+      keys.forEach(key => {
         const [kw, kd, kr, kc] = key.split('-').map(Number);
         const memo = latestMemos[key] || {};
+        const currentMergeSpan = pendingMergeSpansRef.current?.[key] || memo.merge_span || {};
+        const prescription = memo.prescription || currentMergeSpan?.meta?.prescription || '';
+        const rowSpan = Math.max(1, Number(currentMergeSpan?.rowSpan) || 1);
+        const shouldSplitVisit = rowSpan > 1 && !!treatmentMergeOptions?.visitOnLowerRowByPrescription?.[prescription];
+        const lastChildKey = shouldSplitVisit ? cellKey(kw, kd, kr + rowSpan - 1, kc) : '';
+        const lastChildMemo = lastChildKey ? (latestMemos[lastChildKey] || {}) : {};
         const stableContent = visitDebounceRef.current.pending.get(key)?.nextContent
           ?? (latestPending[key] !== undefined ? String(latestPending[key]) : (memo.content || ''));
-        if (!stableContent || stableContent.trim() === '\u200B') return null;
+        const stableChildContent = lastChildKey
+          ? (
+            visitDebounceRef.current.pending.get(key)?.nextChildContent
+              ?? (latestPending[lastChildKey] !== undefined ? String(latestPending[lastChildKey]) : (lastChildMemo.content || ''))
+          )
+          : '';
+        if (!stableContent || stableContent.trim() === '\u200B') return;
 
-        const currentVisit = getSchedulerVisitInputValue(stableContent);
+        const currentVisit = shouldSplitVisit
+          ? (getSchedulerVisitInputValue(stableChildContent) || getSchedulerVisitInputValue(stableContent))
+          : getSchedulerVisitInputValue(stableContent);
         const nextVisit = stepVisitShortcutInputValue(currentVisit, delta);
-        const nextContent = applyVisitCountToSchedulerContent(stableContent, nextVisit);
-        if (nextContent === stableContent) return null;
+        const nextContent = shouldSplitVisit
+          ? applyVisitCountToSchedulerContent(stableContent, '')
+          : applyVisitCountToSchedulerContent(stableContent, nextVisit);
+        const nextChildContent = shouldSplitVisit ? getVisitOnlyContent(nextVisit) : '';
+        if (!shouldSplitVisit && nextContent === stableContent) return;
+        if (shouldSplitVisit && nextContent === stableContent && nextChildContent === stableChildContent) return;
+
+        const payloads = [{
+          year: currentYear,
+          month: currentMonth,
+          week_index: kw,
+          day_index: kd,
+          row_index: kr,
+          col_index: kc,
+          content: nextContent,
+          bg_color: memo.bg_color ?? null,
+          merge_span: currentMergeSpan,
+          prescription: memo.prescription ?? null,
+          body_part: memo.body_part ?? null,
+        }];
+
+        if (shouldSplitVisit && lastChildKey) {
+          payloads.push({
+            year: currentYear,
+            month: currentMonth,
+            week_index: kw,
+            day_index: kd,
+            row_index: kr + rowSpan - 1,
+            col_index: kc,
+            content: nextChildContent,
+            bg_color: null,
+            merge_span: pendingMergeSpansRef.current?.[lastChildKey] || lastChildMemo.merge_span || {
+              rowSpan: 1,
+              colSpan: 1,
+              mergedInto: key,
+            },
+            prescription: null,
+            body_part: null,
+          });
+        }
 
         visitDebounceRef.current.pending.set(key, {
           kw,
@@ -814,10 +878,18 @@ export default function useScheduleKeyboardActions({
           kc,
           memo,
           nextContent,
+          nextChildContent,
+          payloads,
         });
 
-        return { key, content: nextContent };
-      }).filter(Boolean);
+        payloads.forEach((payload) => {
+          displayUpdates.push({
+            key: `${payload.week_index}-${payload.day_index}-${payload.row_index}-${payload.col_index}`,
+            content: payload.content,
+            ...payload,
+          });
+        });
+      });
 
       if (displayUpdates.length > 0) {
         applyCellDisplayRef.current?.(displayUpdates);
@@ -836,9 +908,12 @@ export default function useScheduleKeyboardActions({
         snapshot.timer = null;
 
         Promise.all(
-          pendingSaves.map(({ kw, kd, kr, kc, memo, nextContent }) => {
+          pendingSaves.map(({ kw, kd, kr, kc, memo, nextContent, payloads }) => {
             const key = `${kw}-${kd}-${kr}-${kc}`;
             const nextMergeSpan = pendingMergeSpansRef.current?.[key] || memo.merge_span;
+            if (Array.isArray(payloads) && payloads.length > 1 && saveBulkRef.current) {
+              return saveBulkRef.current(payloads);
+            }
             return saveMemo(
               currentYear,
               currentMonth,
@@ -990,6 +1065,7 @@ export default function useScheduleKeyboardActions({
     isContextMenuTarget,
     handleOpenPatientHistoryModal,
     handleOpenBodyPartMenu,
+    getVisitOnlyContent,
     flushPendingMoveSave,
     setEditingCell,
     setClipboardSource,

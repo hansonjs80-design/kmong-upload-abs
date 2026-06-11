@@ -1,11 +1,12 @@
-import { supabase } from './supabaseClient';
-import { generateShockwaveCalendar, getTodayKST } from './calendarUtils';
-import { normalizeNameForMatch } from './memoParser';
-import { TREATMENT_COMPLETE_BG } from './schedulerUtils';
+import { supabase } from './supabaseClient.js';
+import { generateShockwaveCalendar, getTodayKST } from './calendarUtils.js';
+import { normalizeNameForMatch } from './memoParser.js';
+import { TREATMENT_COMPLETE_BG } from './schedulerUtils.js';
 import {
   getPastLogsForPatient,
   sortPastLogsLatestFirst,
-} from './patientHistoryMatchUtils';
+} from './patientHistoryMatchUtils.js';
+import { applyManualTherapySplitVisitSuffix } from './manualTherapyVisitUtils.js';
 
 let todayManualTherapySyncQueue = Promise.resolve();
 
@@ -190,7 +191,7 @@ async function runTodayManualTherapyScheduleToStatsSync({
     if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
 
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
-    const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
+    let parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
     if (!parsed) return;
     const prescription = cell?.prescription || parsed.durationLabel;
     if (manualPrescriptionSet.size > 0 && !manualPrescriptionSet.has(normalizePrescriptionKey(prescription))) return;
@@ -202,16 +203,7 @@ async function runTodayManualTherapyScheduleToStatsSync({
         const lastChildKey = `${w}-${d}-${r + rowSpan - 1}-${c}`;
         const lastChildCell = memos[lastChildKey];
         const lastChildContent = String(lastChildCell?.content || '').trim();
-        if (lastChildContent) {
-          const childVisitMatch = lastChildContent.match(/^\((\d+)₩?\)$/);
-          if (childVisitMatch) {
-            parsed.visitCount = childVisitMatch[1];
-          } else if (lastChildContent === '*') {
-            parsed.visitCount = '1';
-          } else if (lastChildContent === '(-)') {
-            parsed.visitCount = '-';
-          }
-        }
+        parsed = applyManualTherapySplitVisitSuffix(parsed, lastChildContent);
       }
     }
 
