@@ -141,6 +141,13 @@ export function buildManualTherapyMergePayload({
     if (visitSuffix) {
       masterContent = content.slice(0, content.length - visitSuffix.length).trim();
       lastChildContent = visitSuffix;
+    } else {
+      const existingLastChildKey = getScheduleCellKey(w, d, r + targetRowSpan - 1, c);
+      const existingLastChildContent = String(memos?.[existingLastChildKey]?.content || '').trim();
+      const existingVisitSuffix = getExplicitVisitSuffix(existingLastChildContent);
+      if (existingVisitSuffix) {
+        lastChildContent = existingVisitSuffix;
+      }
     }
   }
 

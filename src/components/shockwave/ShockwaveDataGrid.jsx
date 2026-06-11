@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffe
 /* eslint-disable react-hooks/exhaustive-deps */
 import { supabase } from '../../lib/supabaseClient';
 import { normalizeNameForMatch } from '../../lib/memoParser';
-import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { appendLogTherapists, buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { getTodayKST } from '../../lib/calendarUtils';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useToast } from '../common/Toast';
@@ -96,8 +96,8 @@ export default function ShockwaveDataGrid({
     [therapists]
   );
   const displayTherapists = useMemo(
-    () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
-    [safeTherapists, monthlyTherapists]
+    () => appendLogTherapists(buildDisplayTherapists(safeTherapists, monthlyTherapists), safeInputLogs),
+    [safeTherapists, monthlyTherapists, safeInputLogs]
   );
   const [internalSelectedNames, setInternalSelectedNames] = useState([]);
   const isControlled = externalSelectedNames !== undefined && onSelectedTherapistNamesChange !== undefined;

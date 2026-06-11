@@ -9,6 +9,16 @@ import {
 
 let todayManualTherapySyncQueue = Promise.resolve();
 
+function normalizePrescriptionKey(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function normalizePrescriptionList(values) {
+  return new Set((Array.isArray(values) ? values : [])
+    .map(normalizePrescriptionKey)
+    .filter(Boolean));
+}
+
 function buildSchedulerCellKey(year, month, weekIndex, dayIndex, rowIndex, colIndex) {
   return [
     year,
@@ -148,7 +158,8 @@ async function runTodayManualTherapyScheduleToStatsSync({
   overwriteManual = false,
   pastDataCache = null,
   existingMonthStats = null,
-  collectOnly = false
+  collectOnly = false,
+  manualTherapyPrescriptions = [],
 }) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
@@ -166,6 +177,7 @@ async function runTodayManualTherapyScheduleToStatsSync({
 
   const weeks = generateShockwaveCalendar(year, month);
   const newLogs = [];
+  const manualPrescriptionSet = normalizePrescriptionList(manualTherapyPrescriptions);
 
   // 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
   Object.entries(memos).forEach(([key, cell]) => {
@@ -180,6 +192,8 @@ async function runTodayManualTherapyScheduleToStatsSync({
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
     if (!parsed) return;
+    const prescription = cell?.prescription || parsed.durationLabel;
+    if (manualPrescriptionSet.size > 0 && !manualPrescriptionSet.has(normalizePrescriptionKey(prescription))) return;
 
     if (!parsed.visitCount) {
       const rowSpan = cell?.merge_span?.rowSpan || 1;
@@ -211,7 +225,7 @@ async function runTodayManualTherapyScheduleToStatsSync({
       visit_count: parsed.visitCount || '',
       body_part: cell?.body_part || '',
       therapist_name: parsed.therapistName || therapistName,
-      prescription: parsed.durationLabel,
+      prescription,
       prescription_count: 1,
     });
   });
@@ -399,7 +413,16 @@ export async function syncTodayManualTherapyScheduleToStats(params) {
   return run;
 }
 
-export async function syncMonthManualTherapyScheduleToStats({ year, month, memos, therapists, monthlyTherapists, upToToday = false, overwriteManual = false }) {
+export async function syncMonthManualTherapyScheduleToStats({
+  year,
+  month,
+  memos,
+  therapists,
+  monthlyTherapists,
+  upToToday = false,
+  overwriteManual = false,
+  manualTherapyPrescriptions = [],
+}) {
   const today = getTodayKST();
   const daysInMonth = new Date(year, month, 0).getDate();
   let endDay = daysInMonth;
@@ -416,6 +439,7 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
   const weeks = generateShockwaveCalendar(year, month);
   const patientNamesSet = new Set();
   const chartNumbersSet = new Set();
+  const manualTherapyPrescriptionSet = normalizePrescriptionList(manualTherapyPrescriptions);
 
   Object.entries(memos || {}).forEach(([key, cell]) => {
     const [w, d, _r, c] = key.split('-').map(Number);
@@ -430,6 +454,8 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
     const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
     const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName);
     if (!parsed) return;
+    const prescription = cell?.prescription || parsed.durationLabel;
+    if (manualTherapyPrescriptionSet.size > 0 && !manualTherapyPrescriptionSet.has(normalizePrescriptionKey(prescription))) return;
 
     const norm = normalizeNameForMatch(parsed.patientName);
     if (norm) patientNamesSet.add(norm);
@@ -512,7 +538,8 @@ export async function syncMonthManualTherapyScheduleToStats({ year, month, memos
         overwriteManual,
         pastDataCache,
         existingMonthStats: statsCache,
-        collectOnly: true
+        collectOnly: true,
+        manualTherapyPrescriptions,
       });
 
       if (!result.skipped) {

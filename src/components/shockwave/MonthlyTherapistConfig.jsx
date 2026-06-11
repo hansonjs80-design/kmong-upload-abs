@@ -457,19 +457,19 @@ export default function MonthlyTherapistConfig({
           className={`monthly-therapist-tab${activeTab === 'shockwave' ? ' active' : ''}`}
           onClick={() => setActiveTab('shockwave')}
         >
-          충격파 치료사
+          충격파 통계
         </button>
         <button
           type="button"
           className={`monthly-therapist-tab${activeTab === 'manual_therapy' ? ' active' : ''}`}
           onClick={() => setActiveTab('manual_therapy')}
         >
-          도수 치료사
+          도수치료 통계
         </button>
       </div>
 
       <div className="monthly-therapist-desc">
-        스케줄러 열 인원수와 날짜별 담당 치료사를 월별로 관리합니다. 빈 이름은 해당 기간 비활성 처리됩니다.
+        스케줄 테이블 헤더 이름과 통계에 반영되는 치료사 이름을 함께 관리합니다. 스케줄에 입력된 처방의 치료사는 통계에 자동 포함됩니다.
       </div>
 
       <div className="monthly-therapist-toolbar">
@@ -1481,7 +1481,7 @@ export default function MonthlyTherapistConfig({
             className={`monthly-therapist-section-tab${configSection === 'therapists' ? ' active' : ''}`}
             onClick={() => setConfigSection('therapists')}
           >
-            치료사 설정
+            치료사
           </button>
           <button
             type="button"
@@ -1540,7 +1540,7 @@ export default function MonthlyTherapistConfig({
             {saving
               ? '저장 중...'
               : configSection === 'therapists'
-                ? `${activeTab === 'manual_therapy' ? '도수치료' : '충격파'} 저장`
+                ? '치료사 저장'
                 : configSection === 'staffBlocks'
                   ? '근무표 연동 저장'
                   : configSection === 'textStyle'

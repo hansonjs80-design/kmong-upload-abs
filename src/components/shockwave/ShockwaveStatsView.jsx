@@ -5,7 +5,7 @@ import { syncTodayShockwaveScheduleToStats, syncMonthShockwaveScheduleToStats } 
 import { useToast } from '../common/Toast';
 import { useSchedule } from '../../contexts/ScheduleContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { appendLogTherapists, buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 import { GridSkeleton, SettlementSkeleton } from '../common/LoadingSkeleton';
 import '../../styles/shockwave_stats.css';
 import ShockwaveDataGrid from './ShockwaveDataGrid';
@@ -101,8 +101,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
 
   // Therapist filter state (lifted from ShockwaveDataGrid)
   const displayTherapists = useMemo(
-    () => buildDisplayTherapists(displayBaseTherapists, monthlyTherapists),
-    [displayBaseTherapists, monthlyTherapists]
+    () => appendLogTherapists(buildDisplayTherapists(displayBaseTherapists, monthlyTherapists), safeLogs),
+    [displayBaseTherapists, monthlyTherapists, safeLogs]
   );
   const therapistNameList = useMemo(
     () => displayTherapists.map((t) => t.name).filter(Boolean),
@@ -188,6 +188,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         therapists: latestTherapists,
         monthlyTherapists: latestMonthlyTherapists,
         upToToday: true,
+        shockwavePrescriptions: shockwaveSettings?.prescriptions || [],
+        manualTherapyPrescriptions: shockwaveSettings?.manual_therapy_prescriptions || [],
       });
       // 3. DB에서 통계 로그 다시 가져옴
       await fetchLogs();
@@ -198,7 +200,7 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
     } finally {
       setIsReloading(false);
     }
-  }, [onReloadMemos, memos, monthlyTherapists, currentYear, currentMonth, safeTherapists, fetchLogs, addToast]);
+  }, [onReloadMemos, memos, monthlyTherapists, currentYear, currentMonth, safeTherapists, shockwaveSettings, fetchLogs, addToast]);
 
   useEffect(() => {
     logsLoadedKeyRef.current = '';
@@ -332,6 +334,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         memos,
         therapists: safeTherapists,
         monthlyTherapists,
+        shockwavePrescriptions: shockwaveSettings?.prescriptions || [],
+        manualTherapyPrescriptions: shockwaveSettings?.manual_therapy_prescriptions || [],
       });
 
       if (result.skipped && result.reason === 'today_outside_current_month') {
@@ -370,6 +374,8 @@ export default function ShockwaveStatsView({ currentYear, currentMonth, memos, t
         monthlyTherapists,
         upToToday: false,
         overwriteManual: true,
+        shockwavePrescriptions: shockwaveSettings?.prescriptions || [],
+        manualTherapyPrescriptions: shockwaveSettings?.manual_therapy_prescriptions || [],
       });
 
       if (result.totalUpdates > 0) {

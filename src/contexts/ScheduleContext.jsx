@@ -907,33 +907,32 @@ export function ScheduleProvider({ children }) {
         : null;
 
       if (targetDateStr) {
-        if (therapists.length > 0) {
-          try {
-            await syncTodayShockwaveScheduleToStats({
-              year,
-              month,
-              memos: nextShockwaveMemos,
-              therapists,
-              monthlyTherapists,
-              targetDateStr,
-            });
-          } catch (syncErr) {
-            console.error('Failed to sync shockwave memo to stats:', syncErr);
-          }
+        try {
+          await syncTodayShockwaveScheduleToStats({
+            year,
+            month,
+            memos: nextShockwaveMemos,
+            therapists,
+            monthlyTherapists,
+            targetDateStr,
+            shockwavePrescriptions: shockwaveSettingsRefCache.current?.prescriptions || [],
+            manualTherapyPrescriptions: shockwaveSettingsRefCache.current?.manual_therapy_prescriptions || [],
+          });
+        } catch (syncErr) {
+          console.error('Failed to sync shockwave memo to stats:', syncErr);
         }
-        if (manualTherapists.length > 0) {
-          try {
-            await syncTodayManualTherapyScheduleToStats({
-              year,
-              month,
-              memos: nextShockwaveMemos,
-              therapists: manualTherapists,
-              monthlyTherapists: monthlyManualTherapists,
-              targetDateStr,
-            });
-          } catch (syncErr) {
-            console.error('Failed to sync manual therapy memo to stats:', syncErr);
-          }
+        try {
+          await syncTodayManualTherapyScheduleToStats({
+            year,
+            month,
+            memos: nextShockwaveMemos,
+            therapists,
+            monthlyTherapists,
+            targetDateStr,
+            manualTherapyPrescriptions: shockwaveSettingsRefCache.current?.manual_therapy_prescriptions || [],
+          });
+        } catch (syncErr) {
+          console.error('Failed to sync manual therapy memo to stats:', syncErr);
         }
       }
       return true;
@@ -1069,33 +1068,32 @@ export function ScheduleProvider({ children }) {
       const syncAffectedStats = async () => {
         for (const targetDateStr of affectedDates) {
         if (targetDateStr) {
-          if (therapists.length > 0) {
-            try {
-              await syncTodayShockwaveScheduleToStats({
-                year: currentYear,
-                month: currentMonth,
-                memos: nextShockwaveMemos,
-                therapists,
-                monthlyTherapists,
-                targetDateStr,
-              });
-            } catch (syncErr) {
-              console.error('Failed to sync bulk shockwave memos to stats:', syncErr);
-            }
+          try {
+            await syncTodayShockwaveScheduleToStats({
+              year: currentYear,
+              month: currentMonth,
+              memos: nextShockwaveMemos,
+              therapists,
+              monthlyTherapists,
+              targetDateStr,
+              shockwavePrescriptions: shockwaveSettingsRefCache.current?.prescriptions || [],
+              manualTherapyPrescriptions: shockwaveSettingsRefCache.current?.manual_therapy_prescriptions || [],
+            });
+          } catch (syncErr) {
+            console.error('Failed to sync bulk shockwave memos to stats:', syncErr);
           }
-          if (manualTherapists.length > 0) {
-            try {
-              await syncTodayManualTherapyScheduleToStats({
-                year: currentYear,
-                month: currentMonth,
-                memos: nextShockwaveMemos,
-                therapists: manualTherapists,
-                monthlyTherapists: monthlyManualTherapists,
-                targetDateStr,
-              });
-            } catch (syncErr) {
-              console.error('Failed to sync bulk manual therapy memos to stats:', syncErr);
-            }
+          try {
+            await syncTodayManualTherapyScheduleToStats({
+              year: currentYear,
+              month: currentMonth,
+              memos: nextShockwaveMemos,
+              therapists,
+              monthlyTherapists,
+              targetDateStr,
+              manualTherapyPrescriptions: shockwaveSettingsRefCache.current?.manual_therapy_prescriptions || [],
+            });
+          } catch (syncErr) {
+            console.error('Failed to sync bulk manual therapy memos to stats:', syncErr);
           }
         }
         }

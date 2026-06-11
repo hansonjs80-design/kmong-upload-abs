@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { appendLogTherapists, buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 
 function normalizePatientName(value) {
   return String(value || '').replace(/\*/g, '').trim();
@@ -24,10 +24,11 @@ export default function ShockwaveNewPatientsView({
   monthlyTherapists,
   selectedTherapistNames,
 }) {
+  const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
   const allDisplayTherapists = useMemo(
-    () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
-    [safeTherapists, monthlyTherapists]
+    () => appendLogTherapists(buildDisplayTherapists(safeTherapists, monthlyTherapists), safeLogs),
+    [safeTherapists, monthlyTherapists, safeLogs]
   );
   const displayTherapists = useMemo(() => {
     if (!selectedTherapistNames || selectedTherapistNames.length === 0) return allDisplayTherapists;
@@ -37,7 +38,7 @@ export default function ShockwaveNewPatientsView({
 
   const summary = useMemo(() => {
     const byTherapist = displayTherapists.map((therapist) => {
-      const therapistLogs = (logs || []).filter(
+      const therapistLogs = safeLogs.filter(
         (log) => log?.therapist_name === therapist.name && normalizePatientName(log?.patient_name)
       );
 
@@ -104,7 +105,7 @@ export default function ShockwaveNewPatientsView({
       maxRows,
       totalCount,
     };
-  }, [logs, displayTherapists]);
+  }, [safeLogs, displayTherapists]);
 
   const printColumnWidths = useMemo(() => {
     const therapistCount = Math.max(1, summary.byTherapist.length);
