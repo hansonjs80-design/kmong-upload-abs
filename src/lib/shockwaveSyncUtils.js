@@ -19,6 +19,12 @@ function normalizePrescriptionKeySync(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+function normalizePrescriptionList(values) {
+  return new Set((Array.isArray(values) ? values : [])
+    .map(normalizePrescriptionKeySync)
+    .filter(Boolean));
+}
+
 let todaySchedulerSyncQueue = Promise.resolve();
 
 function buildSchedulerCellKey(year, month, weekIndex, dayIndex, rowIndex, colIndex) {
@@ -201,7 +207,17 @@ function resolveTherapistName(slotIndex, day, therapists, monthlyTherapists) {
   return therapists?.[slotIndex]?.name || `치료사 ${slotIndex + 1}`;
 }
 
-async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therapists, monthlyTherapists, targetDateStr, overwriteManual = false }) {
+async function runTodayShockwaveScheduleToStatsSync({
+  year,
+  month,
+  memos,
+  therapists,
+  monthlyTherapists,
+  targetDateStr,
+  overwriteManual = false,
+  shockwavePrescriptions = [],
+  manualTherapyPrescriptions = [],
+}) {
   if (!memos) {
     return { skipped: true, reason: 'missing_memos' };
   }
@@ -218,6 +234,8 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
 
   const weeks = generateShockwaveCalendar(year, month);
   const newLogs = [];
+  const shockwavePrescriptionSet = normalizePrescriptionList(shockwavePrescriptions);
+  const manualPrescriptionSet = normalizePrescriptionList(manualTherapyPrescriptions);
 
   // 방문 완료(bg_color === TREATMENT_COMPLETE_BG)된 셀만 통계에 포함
   Object.entries(memos).forEach(([key, cell]) => {
@@ -228,6 +246,11 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
 
     // 방문 완료된 셀만 통계에 포함
     if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+
+    const cellPrescription = cell?.prescription || get4060PrescriptionFromContent(cell?.content) || '';
+    const normalizedPrescription = normalizePrescriptionKeySync(cellPrescription);
+    if (normalizedPrescription && manualPrescriptionSet.has(normalizedPrescription)) return;
+    if (shockwavePrescriptionSet.size > 0 && normalizedPrescription && !shockwavePrescriptionSet.has(normalizedPrescription)) return;
 
     const parsed = parseTherapyInfo(cell?.content);
     if (!parsed) return;
@@ -243,8 +266,8 @@ async function runTodayShockwaveScheduleToStatsSync({ year, month, memos, therap
       visit_count: parsed.visit_count || '',
       body_part: cell?.body_part || parsed.body_part || '',
       therapist_name: therapistName,
-      prescription: cell?.prescription || get4060PrescriptionFromContent(cell?.content) || '',
-      prescription_count: (cell?.prescription || get4060PrescriptionFromContent(cell?.content)) ? 1 : null,
+      prescription: cellPrescription,
+      prescription_count: cellPrescription ? 1 : null,
     });
   });
 
@@ -421,7 +444,17 @@ export async function syncTodayShockwaveScheduleToStats(params) {
   return run;
 }
 
-export async function syncMonthShockwaveScheduleToStats({ year, month, memos, therapists, monthlyTherapists, upToToday = false, overwriteManual = false }) {
+export async function syncMonthShockwaveScheduleToStats({
+  year,
+  month,
+  memos,
+  therapists,
+  monthlyTherapists,
+  upToToday = false,
+  overwriteManual = false,
+  shockwavePrescriptions = [],
+  manualTherapyPrescriptions = [],
+}) {
   const today = getTodayKST();
   const daysInMonth = new Date(year, month, 0).getDate();
   let endDay = daysInMonth;
@@ -444,7 +477,9 @@ export async function syncMonthShockwaveScheduleToStats({ year, month, memos, th
         therapists,
         monthlyTherapists,
         targetDateStr: dateStr,
-        overwriteManual
+        overwriteManual,
+        shockwavePrescriptions,
+        manualTherapyPrescriptions,
       });
       if (!result.skipped) {
         totalInserted += result.insertedCount || 0;

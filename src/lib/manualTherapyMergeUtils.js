@@ -1,5 +1,6 @@
 import { getScheduleCellKey, parseScheduleCellKey } from './scheduleSelectionUtils.js';
 import { buildScheduleCellPayload, markIntentionalClearPayload } from './scheduleMergeUtils.js';
+import { getExplicitVisitSuffix } from './schedulerCellTextUtils.js';
 
 const DEFAULT_MERGE_SPAN = { rowSpan: 1, colSpan: 1, mergedInto: null };
 const DEFAULT_INTERVAL_MINUTES = 20;
@@ -90,6 +91,7 @@ export function buildManualTherapyMergePayload({
   mergeSpan,
   intervalMinutes = DEFAULT_INTERVAL_MINUTES,
   durationMinutesByPrescription = {},
+  visitOnLowerRowByPrescription = {},
 }) {
   const targetRowSpan = getManualTherapyRowSpan(prescription, {
     intervalMinutes,
@@ -130,6 +132,25 @@ export function buildManualTherapyMergePayload({
     mergedInto: null,
   };
 
+  // 회차 하단 분리 로직
+  const shouldSplitVisit = !!visitOnLowerRowByPrescription[prescription];
+  let masterContent = content;
+  let lastChildContent = '';
+  if (shouldSplitVisit && targetRowSpan > 1) {
+    const visitSuffix = getExplicitVisitSuffix(content);
+    if (visitSuffix) {
+      masterContent = content.slice(0, content.length - visitSuffix.length).trim();
+      lastChildContent = visitSuffix;
+    } else {
+      const existingLastChildKey = getScheduleCellKey(w, d, r + targetRowSpan - 1, c);
+      const existingLastChildContent = String(memos?.[existingLastChildKey]?.content || '').trim();
+      const existingVisitSuffix = getExplicitVisitSuffix(existingLastChildContent);
+      if (existingVisitSuffix) {
+        lastChildContent = existingVisitSuffix;
+      }
+    }
+  }
+
   const payloadByKey = new Map();
   payloadByKey.set(key, buildScheduleCellPayload({
     key,
@@ -137,7 +158,7 @@ export function buildManualTherapyMergePayload({
     currentMonth,
     memo: memos[key],
     overrides: {
-      content,
+      content: masterContent,
       bg_color: bgColor,
       merge_span: masterMergeSpan,
       prescription,
@@ -145,15 +166,17 @@ export function buildManualTherapyMergePayload({
     },
   }));
 
+  const lastChildRow = r + targetRowSpan - 1;
   for (let row = r + 1; row < r + targetRowSpan; row += 1) {
     const childKey = getScheduleCellKey(w, d, row, c);
+    const isLastChild = row === lastChildRow;
     payloadByKey.set(childKey, buildScheduleCellPayload({
       key: childKey,
       currentYear,
       currentMonth,
       memo: memos[childKey],
       overrides: {
-        content: '',
+        content: isLastChild && lastChildContent ? lastChildContent : '',
         bg_color: null,
         merge_span: { rowSpan: 1, colSpan: 1, mergedInto: key },
         prescription: null,

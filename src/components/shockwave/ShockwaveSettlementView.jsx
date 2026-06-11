@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
+import { appendLogTherapists, buildDisplayTherapists } from '../../lib/therapistDisplayUtils';
 
 function normalizePrescriptionKey(value) {
   return String(value || '')
@@ -37,8 +37,8 @@ export default function ShockwaveSettlementView({
   const safeLogs = useMemo(() => (Array.isArray(logs) ? logs.filter(Boolean) : []), [logs]);
   const safeTherapists = useMemo(() => (Array.isArray(therapists) ? therapists.filter(Boolean) : []), [therapists]);
   const allDisplayTherapists = useMemo(
-    () => buildDisplayTherapists(safeTherapists, monthlyTherapists),
-    [safeTherapists, monthlyTherapists]
+    () => appendLogTherapists(buildDisplayTherapists(safeTherapists, monthlyTherapists), safeLogs),
+    [safeTherapists, monthlyTherapists, safeLogs]
   );
   const displayTherapists = useMemo(() => {
     if (!selectedTherapistNames || selectedTherapistNames.length === 0) return allDisplayTherapists;

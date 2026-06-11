@@ -141,6 +141,32 @@ test('buildManualTherapyMergePayload clears rows left from a previous larger mer
   assert.equal(cleared.merge_span.meta.intentional_clear, true);
 });
 
+test('buildManualTherapyMergePayload keeps a split visit suffix from the last child row', () => {
+  const result = buildManualTherapyMergePayload({
+    ...baseArgs,
+    key: '0-1-4-2',
+    memos: {
+      '0-1-4-2': {
+        content: '234/주한솔40',
+        merge_span: { rowSpan: 2, colSpan: 1, mergedInto: null },
+      },
+      '0-1-5-2': {
+        content: '(2)',
+        merge_span: { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' },
+      },
+    },
+    content: '234/주한솔40',
+    prescription: '40분',
+    visitOnLowerRowByPrescription: { '40분': true },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.payload[0].content, '234/주한솔40');
+  const child = result.payload.find((item) => item.row_index === 5);
+  assert.equal(child.content, '(2)');
+  assert.deepEqual(child.merge_span, { rowSpan: 1, colSpan: 1, mergedInto: '0-1-4-2' });
+});
+
 test('buildManualTherapyUnmergePayload clears a manual therapy merge when changing to shockwave', () => {
   const result = buildManualTherapyUnmergePayload({
     ...baseArgs,

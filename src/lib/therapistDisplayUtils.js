@@ -73,3 +73,31 @@ export function buildDisplayTherapists(therapists, monthlyTherapists) {
     }));
   }).flat();
 }
+
+export function appendLogTherapists(displayTherapists, logs) {
+  const base = Array.isArray(displayTherapists) ? displayTherapists.filter(Boolean) : [];
+  const knownNames = new Set(base.map((therapist) => String(therapist?.name || '').trim()).filter(Boolean));
+  const extraNames = [];
+
+  (Array.isArray(logs) ? logs : []).forEach((log) => {
+    const name = String(log?.therapist_name || '').trim();
+    if (!name || knownNames.has(name)) return;
+    knownNames.add(name);
+    extraNames.push(name);
+  });
+
+  if (extraNames.length === 0) return base;
+
+  return [
+    ...base,
+    ...extraNames.map((name, index) => ({
+      id: `log-therapist-${name}`,
+      key: `log-therapist-${name}`,
+      slotIdx: base.length + index,
+      name,
+      displayName: name,
+      rangeLabel: '',
+      isLogOnly: true,
+    })),
+  ];
+}
