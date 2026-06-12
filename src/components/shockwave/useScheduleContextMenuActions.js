@@ -12,6 +12,8 @@ import {
   getBodyPartOptionsFromMergeSpan,
   getMemoListFromMergeSpan,
   getReservationTimeFromMergeSpan,
+  getSplitVisitChildKey,
+  getVisitOnlyContent,
   normalizeBodyPartKey,
   normalizeReservationTimeValue,
   normalizeVisitInputValue,
@@ -738,22 +740,57 @@ export default function useScheduleContextMenuActions({
     }
     else if (action?.type === 'visitCount') {
       const keys = getContextTargetKeys();
-      const oldMemos = buildMemoSnapshotForKeys(keys);
-      let anyChanged = false;
       const nextVisitInput = normalizeVisitInputValue(action.value);
       setContextMenuVisitInput(nextVisitInput);
+      const changes = [];
+
       for (const key of keys) {
         const memo = getMemoForAction(key);
         const stableContent = getStableMemoContent(key, memo);
-        const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisitInput);
-        if (updatedContent === stableContent) continue;
-        const overrides = { content: updatedContent };
-        applyImmediateMeta(key, memo, overrides);
-        updateContextMemoSnapshot(key, memo, overrides);
-        saveDebounceRef.current.pending.set(key, { memo, overrides });
-        anyChanged = true;
+        const mergeSpan = pendingMergeSpans?.[key] || memo.merge_span || {};
+        const prescription = memo.prescription || mergeSpan?.meta?.prescription || contextMenu?.currentPrescription || '';
+        const childKey = getSplitVisitChildKey({
+          key,
+          mergeSpan,
+          prescription,
+          visitOnLowerRowByPrescription: treatmentMergeOptions?.visitOnLowerRowByPrescription || {},
+        });
+
+        if (childKey) {
+          const masterContent = applyVisitCountToSchedulerContent(stableContent, '');
+          const childMemo = memos[childKey] || {};
+          const stableChildContent = getStableMemoContent(childKey, childMemo);
+          const nextChildContent = getVisitOnlyContent(nextVisitInput);
+          if (masterContent !== stableContent) {
+            changes.push({ key, memo, overrides: { content: masterContent }, updateContext: true });
+          }
+          if (nextChildContent !== stableChildContent) {
+            changes.push({
+              key: childKey,
+              memo: childMemo,
+              overrides: {
+                content: nextChildContent,
+                merge_span: childMemo.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: key },
+                prescription: childMemo.prescription ?? null,
+                body_part: childMemo.body_part ?? null,
+              },
+              updateContext: false,
+            });
+          }
+        } else {
+          const updatedContent = applyVisitCountToSchedulerContent(stableContent, nextVisitInput);
+          if (updatedContent === stableContent) continue;
+          changes.push({ key, memo, overrides: { content: updatedContent }, updateContext: true });
+        }
       }
-      if (anyChanged) {
+
+      if (changes.length > 0) {
+        const oldMemos = buildMemoSnapshotForKeys(Array.from(new Set(changes.map(change => change.key))));
+        changes.forEach(({ key, memo, overrides, updateContext }) => {
+          applyImmediateMeta(key, memo, overrides);
+          if (updateContext) updateContextMemoSnapshot(key, memo, overrides);
+          saveDebounceRef.current.pending.set(key, { memo, overrides });
+        });
         if (!saveDebounceRef.current.undoMemos) {
           saveDebounceRef.current.undoMemos = oldMemos;
         }
