@@ -1573,6 +1573,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       editAutosaveTimerRef.current = null;
     }
     const oldContent = memos[key]?.content || '';
+    const oldPrescription = memos[key]?.prescription || '';
+    const oldBodyPart = memos[key]?.body_part || null;
+    const oldMergeSpan = memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null };
     const immediateContent = String(finalValue ?? '').trim();
     setPendingDisplayValues((prev) => ({ ...prev, [key]: immediateContent }));
     setEditingCell(null);
@@ -1595,7 +1598,12 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     const autoDosePrescription = get4060PrescriptionFromContent(newContent);
     if (autoDosePrescription) {
       newPrescription = autoDosePrescription;
-    } else if (!has4060Pattern(newContent) && /^\d{2,3}분$/.test(memos[key]?.prescription || '')) {
+    } else if (
+      !hasPrescriptionResult &&
+      has4060Pattern(oldContent) &&
+      !has4060Pattern(newContent) &&
+      /^\d{2,3}분$/.test(oldPrescription)
+    ) {
       // 이름에서 숫자 태그가 없어졌는데 기존 처방이 도수치료 처방이면 처방 없음으로 변경
       newPrescription = '';
     }
@@ -1647,16 +1655,25 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       rowCount: baseTimeSlots.length,
       content: newContent,
       bgColor: memos[key]?.bg_color || null,
-      prescription: newPrescription ?? (memos[key]?.prescription || ''),
-      bodyPart: hasBodyPartResult ? newBodyPart : (memos[key]?.body_part || null),
-      mergeSpan: newMergeSpan || memos[key]?.merge_span,
+      prescription: newPrescription ?? oldPrescription,
+      bodyPart: hasBodyPartResult ? newBodyPart : oldBodyPart,
+      mergeSpan: newMergeSpan || oldMergeSpan,
       ...treatmentMergeOptions,
     });
 
     const shouldWritePrescription = hasPrescriptionResult || (newPrescription !== undefined && newPrescription !== null);
-    const prescriptionChanged = shouldWritePrescription && (memos[key]?.prescription || '') !== (newPrescription || '');
-    const bodyPartChanged = hasBodyPartResult && (memos[key]?.body_part || '') !== (newBodyPart || '');
-    const mergeSpanChanged = hasMergeSpanResult && JSON.stringify(memos[key]?.merge_span || null) !== JSON.stringify(newMergeSpan || null);
+    const finalPrescription = newContent.trim()
+      ? (shouldWritePrescription ? (newPrescription || '') : oldPrescription)
+      : '';
+    const finalBodyPart = newContent.trim()
+      ? (hasBodyPartResult ? newBodyPart : oldBodyPart)
+      : null;
+    const finalMergeSpan = newContent.trim()
+      ? (hasMergeSpanResult ? newMergeSpan : oldMergeSpan)
+      : { rowSpan: 1, colSpan: 1, mergedInto: null };
+    const prescriptionChanged = oldPrescription !== finalPrescription;
+    const bodyPartChanged = (oldBodyPart || '') !== (finalBodyPart || '');
+    const mergeSpanChanged = JSON.stringify(oldMergeSpan || null) !== JSON.stringify(finalMergeSpan || null);
     if (newContent === oldContent && !prescriptionChanged && !bodyPartChanged && !mergeSpanChanged && !manualTherapyMerge.ok) {
       setPendingDisplayValues((prev) => {
         if (!(key in prev)) return prev;
@@ -1705,9 +1722,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       c,
       oldContent,
       oldBg: memos[key]?.bg_color,
-      oldMergeSpan: memos[key]?.merge_span || { rowSpan: 1, colSpan: 1, mergedInto: null },
-      oldPrescription: memos[key]?.prescription || null,
-      oldBodyPart: memos[key]?.body_part || null,
+      oldMergeSpan,
+      oldPrescription: oldPrescription || null,
+      oldBodyPart: oldBodyPart || null,
     });
     const success = await queuedOnSaveMemo(
       currentYear,
@@ -1718,9 +1735,9 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       c,
       newContent,
       undefined,
-      newContent.trim() ? newMergeSpan : { rowSpan: 1, colSpan: 1, mergedInto: null },
-      newContent.trim() ? newPrescription : '',
-      newContent.trim() ? newBodyPart : null
+      finalMergeSpan,
+      finalPrescription,
+      finalBodyPart
     );
     if (success) removePendingScheduleDraftIfValue(currentYear, currentMonth, key, newContent);
     else rememberPendingScheduleDraft(currentYear, currentMonth, key, newContent);
