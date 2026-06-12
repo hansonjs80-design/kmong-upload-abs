@@ -1354,6 +1354,55 @@ export default function MonthlyTherapistConfig({
                   <span className="monthly-text-style-unit">px</span>
                 </div>
               </label>
+
+              {/* 4. 시간 열 설정 */}
+              <label className="monthly-text-style-field">
+                <span>시간 열 글자 크기</span>
+                <div className="monthly-text-style-size-row">
+                  <input
+                    type="range"
+                    min={8}
+                    max={18}
+                    step={1}
+                    value={schedulerTextSettings.time_font_size ?? DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      time_font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size,
+                    }))}
+                  />
+                  <input
+                    type="number"
+                    className="monthly-operating-input monthly-text-style-number"
+                    min={8}
+                    max={18}
+                    step={1}
+                    value={schedulerTextSettings.time_font_size ?? DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size}
+                    onChange={(e) => setSchedulerTextSettings((prev) => ({
+                      ...prev,
+                      time_font_size: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size,
+                    }))}
+                  />
+                  <span className="monthly-text-style-unit">px</span>
+                </div>
+              </label>
+
+              <label className="monthly-text-style-field">
+                <span>시간 열 글자 두께</span>
+                <select
+                  className="monthly-operating-input monthly-text-style-select"
+                  value={schedulerTextSettings.time_font_weight ?? DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_weight}
+                  onChange={(e) => setSchedulerTextSettings((prev) => ({
+                    ...prev,
+                    time_font_weight: Number(e.target.value) || DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_weight,
+                  }))}
+                >
+                  <option value={500}>보통 (500)</option>
+                  <option value={600}>조금 굵게 (600)</option>
+                  <option value={700}>굵게 (700)</option>
+                  <option value={800}>매우 굵게 (800)</option>
+                  <option value={900}>최대 굵기 (900)</option>
+                </select>
+              </label>
             </div>
 
             <div className="monthly-text-style-preview-wrap">
@@ -1404,6 +1453,20 @@ export default function MonthlyTherapistConfig({
                 <div className="monthly-text-style-preview-row">
                   <div className="monthly-text-style-preview-title">스케줄 셀 미리보기</div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div
+                      className="monthly-text-style-preview-cell"
+                      style={{
+                        width: '52px',
+                        minWidth: '52px',
+                        padding: '2px 1px',
+                        fontSize: `${schedulerTextSettings.time_font_size ?? DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size}px`,
+                        fontWeight: schedulerTextSettings.time_font_weight ?? DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_weight,
+                        lineHeight: 0.95,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      13:20
+                    </div>
                     <div
                       className="monthly-text-style-preview-cell"
                       style={{

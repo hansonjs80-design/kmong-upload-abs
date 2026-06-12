@@ -7,6 +7,8 @@ export const DEFAULT_SCHEDULER_TEXT_SETTINGS = {
   therapist_font_size: 14,
   therapist_font_weight: 700,
   therapist_height: 29,
+  time_font_size: 13,
+  time_font_weight: 800,
 };
 
 function normalizeFontSize(value) {
@@ -20,6 +22,13 @@ function normalizeHeaderFontSize(value, defaultVal) {
   const nextValue = Number(value);
   if (!Number.isFinite(nextValue)) return defaultVal;
   const clamped = Math.min(24, Math.max(10, nextValue));
+  return Math.round(clamped * 2) / 2;
+}
+
+function normalizeTimeFontSize(value, defaultVal = DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_size) {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return defaultVal;
+  const clamped = Math.min(18, Math.max(8, nextValue));
   return Math.round(clamped * 2) / 2;
 }
 
@@ -52,6 +61,8 @@ export function getEffectiveSchedulerTextSettings() {
         therapist_font_size: normalizeHeaderFontSize(parsed.therapist_font_size, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_size),
         therapist_font_weight: normalizeFontWeight(parsed.therapist_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_weight),
         therapist_height: normalizeHeaderHeight(parsed.therapist_height, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_height),
+        time_font_size: normalizeTimeFontSize(parsed.time_font_size),
+        time_font_weight: normalizeFontWeight(parsed.time_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_weight),
       };
     }
   } catch {
@@ -73,6 +84,8 @@ export function setMonthlySchedulerTextSettings(settings, _year, _month, nextCon
       therapist_font_size: normalizeHeaderFontSize(nextConfig?.therapist_font_size ?? current.therapist_font_size, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_size),
       therapist_font_weight: normalizeFontWeight(nextConfig?.therapist_font_weight ?? current.therapist_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_font_weight),
       therapist_height: normalizeHeaderHeight(nextConfig?.therapist_height ?? current.therapist_height, DEFAULT_SCHEDULER_TEXT_SETTINGS.therapist_height),
+      time_font_size: normalizeTimeFontSize(nextConfig?.time_font_size ?? current.time_font_size),
+      time_font_weight: normalizeFontWeight(nextConfig?.time_font_weight ?? current.time_font_weight, DEFAULT_SCHEDULER_TEXT_SETTINGS.time_font_weight),
     };
     window.localStorage.setItem(SCHEDULER_TEXT_SETTINGS_KEY, JSON.stringify(updated));
     window.dispatchEvent(new Event('scheduler-text-settings-changed'));
