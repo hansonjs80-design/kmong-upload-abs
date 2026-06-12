@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { buildManualTherapyUnmergePayload } from '../../lib/manualTherapyMergeUtils';
 import { buildManualTherapyAutoMergePayload } from '../../lib/scheduleManualTherapyAutoMergeUtils';
-import { has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
+import { applyDoseTagToContent, has4060Pattern, normalize4060StarOrder, strip4060FromContent } from '../../lib/schedulerContentFormat';
 import {
   addBodyPartToMap,
   applyVisitCountToSchedulerContent,
@@ -210,20 +210,21 @@ export default function useScheduleContextMenuActions({
           }
         }
 
-        // 3. 기존 content에서 40/60 패턴 및 회차 패턴 제거 후 재생성
+        // 3. 기존 content에서 도수 태그를 처방 설정에 맞게 재생성
         let baseText = updatedContent;
         if (selfVisit) {
           baseText = baseText.slice(0, baseText.length - selfVisit.length).trim();
         }
-        baseText = strip4060FromContent(baseText);
 
         if (doseNumber) {
-          baseText = `${baseText}${doseNumber}`;
+          updatedContent = applyDoseTagToContent(`${baseText}${finalVisitSuffix || ''}`, doseNumber);
+        } else {
+          baseText = strip4060FromContent(baseText);
+          if (finalVisitSuffix) {
+            baseText = `${baseText}${finalVisitSuffix}`;
+          }
+          updatedContent = normalize4060StarOrder(baseText);
         }
-        if (finalVisitSuffix) {
-          baseText = `${baseText}${finalVisitSuffix}`;
-        }
-        updatedContent = normalize4060StarOrder(baseText);
 
         if (memo.prescription !== action.value || updatedContent !== getStableMemoContent(key, memo)) {
           updateContextMemoSnapshot(key, memo, {
