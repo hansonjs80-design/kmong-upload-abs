@@ -44,3 +44,60 @@ export function inheritMonthlyTherapistsFromPreviousRows(previousRows, year, mon
       type,
     }));
 }
+
+export function resolveMonthlyTherapistName({
+  slotIndex,
+  day,
+  year,
+  month,
+  monthlyTherapists,
+  fallbackName = '',
+}) {
+  const rows = Array.isArray(monthlyTherapists)
+    ? monthlyTherapists.filter((item) => Number(item?.slot_index) === Number(slotIndex))
+    : [];
+  if (rows.length === 0) return fallbackName;
+
+  const targetYear = Number(year);
+  const targetMonth = Number(month);
+  const targetMonthValue = getMonthValue(targetYear, targetMonth);
+  const hasDatedRows = rows.some((item) => (
+    Number.isFinite(Number(item?.year)) && Number.isFinite(Number(item?.month))
+  ));
+
+  const isDayInRange = (item) => {
+    const startDay = Number(item?.start_day) || 1;
+    const endDay = Number(item?.end_day) || 31;
+    return Number(day) >= startDay && Number(day) <= endDay;
+  };
+
+  const exactRows = hasDatedRows
+    ? rows.filter((item) => Number(item?.year) === targetYear && Number(item?.month) === targetMonth)
+    : rows;
+  const exactMatch = exactRows.find(isDayInRange);
+  if (exactMatch !== undefined) return exactMatch.therapist_name || '';
+
+  if (!hasDatedRows) return fallbackName;
+
+  const nearestMonthValue = rows.reduce((best, item) => {
+    const rowYear = Number(item?.year);
+    const rowMonth = Number(item?.month);
+    if (!Number.isFinite(rowYear) || !Number.isFinite(rowMonth)) return best;
+    const value = getMonthValue(rowYear, rowMonth);
+    const distance = Math.abs(value - targetMonthValue);
+    if (!best || distance < best.distance || (distance === best.distance && value > best.value)) {
+      return { value, distance };
+    }
+    return best;
+  }, null);
+
+  if (!nearestMonthValue) return fallbackName;
+
+  const nearestRows = rows.filter((item) => (
+    getMonthValue(item?.year, item?.month) === nearestMonthValue.value
+  ));
+  const nearestMatch = nearestRows.find(isDayInRange);
+  if (nearestMatch !== undefined) return nearestMatch.therapist_name || '';
+
+  return fallbackName;
+}

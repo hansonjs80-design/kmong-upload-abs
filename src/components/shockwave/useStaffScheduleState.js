@@ -5,6 +5,7 @@ import {
   getEffectiveStaffScheduleBlockRules,
   normalizeStaffScheduleRuleText,
 } from '../../lib/staffScheduleBlockRules';
+import { resolveMonthlyTherapistName } from '../../lib/monthlyTherapistInheritanceUtils';
 
 export default function useStaffScheduleState({
   colCount,
@@ -22,20 +23,14 @@ export default function useStaffScheduleState({
     }
     const targetYear = Number(dateInfo?.year || currentYear);
     const targetMonth = Number(dateInfo?.month || currentMonth);
-    const hasDatedRows = monthlyTherapists.some((therapist) => (
-      Number.isFinite(Number(therapist?.year)) && Number.isFinite(Number(therapist?.month))
-    ));
-    const match = monthlyTherapists.find(
-      (therapist) => {
-        if (Number(therapist?.slot_index) !== Number(slotIndex)) return false;
-        if (hasDatedRows && Number.isFinite(Number(therapist?.year)) && Number.isFinite(Number(therapist?.month))) {
-          if (Number(therapist.year) !== targetYear || Number(therapist.month) !== targetMonth) return false;
-        }
-        return day >= therapist.start_day && day <= therapist.end_day;
-      }
-    );
-    if (match !== undefined) return match.therapist_name || '';
-    return therapists[slotIndex]?.name || '';
+    return resolveMonthlyTherapistName({
+      slotIndex,
+      day,
+      year: targetYear,
+      month: targetMonth,
+      monthlyTherapists,
+      fallbackName: therapists[slotIndex]?.name || '',
+    });
   }, [currentMonth, currentYear, monthlyTherapists, therapists]);
 
   const normalizeStaffBlockKeyword = useCallback((value) => normalizeStaffScheduleRuleText(value), []);
