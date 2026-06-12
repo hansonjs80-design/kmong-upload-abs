@@ -9,6 +9,7 @@ import {
 } from '../../lib/schedulerUtils';
 
 const MIN_SCHEDULE_ROW_HEIGHT = 5;
+const ROW_HEIGHT_DRAG_SENSITIVITY = 0.5;
 const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_SCHEDULE_DAY_WIDTH_MOBILE = 70;
 const MIN_FOCUSED_DAY_WIDTH = 97;
@@ -59,6 +60,11 @@ const maybeLockMobileResize = (event) => {
   }
 };
 
+const clampRowHeight = (value) => Math.max(
+  MIN_SCHEDULE_ROW_HEIGHT,
+  Math.round(Number(value || MIN_SCHEDULE_ROW_HEIGHT) * 2) / 2
+);
+
 export default function useScheduleResizeState({ colCount }) {
   const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
   const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
@@ -104,7 +110,7 @@ export default function useScheduleResizeState({ colCount }) {
       if (!rowResizeRef.current.active) return;
       const point = getPointerClient(moveEvent);
       const delta = point.y - rowResizeRef.current.startY;
-      latestHeight = Math.max(MIN_SCHEDULE_ROW_HEIGHT, rowResizeRef.current.startHeight + delta);
+      latestHeight = clampRowHeight(rowResizeRef.current.startHeight + (delta * ROW_HEIGHT_DRAG_SENSITIVITY));
       setRowHeight(latestHeight);
     };
     const onUp = (upEvent) => {
