@@ -152,3 +152,57 @@ export function buildSchedulerCellDisplay(content, mergeSpan) {
     hasDisplayText,
   };
 }
+
+export function getVisitOnlyContent(visitInput) {
+  const normalizedVisit = normalizeVisitInputValue(visitInput);
+  if (!normalizedVisit) return '';
+  if (normalizedVisit === '-') return '(-)';
+  if (normalizedVisit === '*') return '*';
+  return `(${normalizedVisit})`;
+}
+
+export function getSplitVisitChildKey({
+  key,
+  mergeSpan,
+  prescription,
+  visitOnLowerRowByPrescription = {},
+}) {
+  if (!key || !mergeSpan || !prescription || !visitOnLowerRowByPrescription[prescription]) return '';
+  const rowSpan = Math.max(1, Number(mergeSpan.rowSpan) || 1);
+  if (rowSpan <= 1) return '';
+  const [w, d, r, c] = String(key).split('-').map(Number);
+  if (![w, d, r, c].every(Number.isFinite)) return '';
+  return `${w}-${d}-${r + rowSpan - 1}-${c}`;
+}
+
+export function getEffectiveSchedulerVisitInput({
+  key,
+  content,
+  mergeSpan,
+  prescription,
+  memos = {},
+  pendingDisplayValues = {},
+  visitOnLowerRowByPrescription = {},
+}) {
+  const childKey = getSplitVisitChildKey({
+    key,
+    mergeSpan,
+    prescription,
+    visitOnLowerRowByPrescription,
+  });
+
+  if (childKey) {
+    const childContent = Object.prototype.hasOwnProperty.call(pendingDisplayValues || {}, childKey)
+      ? String(pendingDisplayValues[childKey] ?? '')
+      : String(memos?.[childKey]?.content || '');
+    const childVisit = getSchedulerVisitInputValue(childContent);
+    if (childVisit) return childVisit;
+  }
+
+  return getSchedulerVisitInputValue(content);
+}
+
+export function getEffectiveSchedulerVisitSuffix(args = {}) {
+  const visitInput = getEffectiveSchedulerVisitInput(args);
+  return getVisitOnlyContent(visitInput);
+}

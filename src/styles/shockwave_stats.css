@@ -4652,3 +4652,416 @@ thead .hdr-grand-total.hdr-new-patient-total.sticky-right-last-1::before {
   color: #1e3a8a;
   border-color: #6b9cf0;
 }
+
+/* Settlement settings: compact professional control surface. */
+.sw-settlement-settings-card.settlement-settings-pro {
+  width: min(100%, 1380px);
+  inline-size: min(100%, 1380px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #d9e1ea;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+}
+
+.settlement-settings-pro-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e5ebf2;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.settlement-settings-title-block {
+  min-width: 0;
+}
+
+.settlement-settings-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.settlement-settings-title-block h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.settlement-settings-title-block p {
+  margin: 7px 0 0;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.settlement-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.settlement-incentive-control {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 7px 10px;
+  border: 1px solid #d8e0ea;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.settlement-incentive-control span {
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.settlement-incentive-control div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.settlement-incentive-control .form-input {
+  width: 74px;
+  height: 30px;
+  padding: 4px 8px;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.settlement-incentive-control em {
+  color: #64748b;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.settlement-save-btn {
+  min-width: 142px;
+  height: 42px;
+  border-radius: 10px;
+  font-weight: 900;
+}
+
+.settlement-settings-pro-grid {
+  display: grid;
+  grid-template-columns: minmax(250px, 340px) minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px 24px 24px;
+  align-items: start;
+}
+
+.settlement-settings-panel {
+  min-width: 0;
+  border: 1px solid #dde5ee;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.settlement-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid #e6edf5;
+  background: #f8fafc;
+}
+
+.settlement-panel-head strong {
+  display: block;
+  color: #111827;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.settlement-panel-head span {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.settlement-panel-head small {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: 1px solid #d4e2f5;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.settlement-therapist-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.settlement-therapist-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 7px 9px;
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.settlement-therapist-item.is-selected {
+  border-color: #bfdbfe;
+  background: #f0f7ff;
+}
+
+.settlement-therapist-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #1f2937;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.settlement-therapist-item label span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settlement-therapist-order {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settlement-icon-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cfd9e6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.settlement-icon-btn:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.settlement-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.settlement-empty-hint {
+  margin: 0;
+  padding: 16px;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.settlement-prescription-panel {
+  overflow-x: auto;
+}
+
+.settlement-prescription-table {
+  min-width: 760px;
+}
+
+.settlement-prescription-head,
+.settlement-prescription-row {
+  display: grid;
+  grid-template-columns: minmax(118px, 1.1fr) 122px 86px 78px 142px 42px 52px 56px;
+  align-items: center;
+  gap: 8px;
+}
+
+.settlement-prescription-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5ebf2;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  background: #fbfdff;
+}
+
+.settlement-prescription-row {
+  min-height: 58px;
+  padding: 9px 14px;
+  border-bottom: 1px solid #edf2f7;
+  background: #ffffff;
+}
+
+.settlement-prescription-row:hover {
+  background: #fbfdff;
+}
+
+.settlement-prescription-row:last-child {
+  border-bottom: 0;
+}
+
+.settlement-settings-pro .form-input {
+  height: 34px;
+  border: 1px solid #d5dee9;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1f2937;
+  font-weight: 800;
+}
+
+.settlement-settings-pro .form-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+.settlement-dose-tag-group,
+.settlement-duration-group,
+.settlement-shortcut-group,
+.settlement-price-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.settlement-dose-tag-input {
+  width: 54px;
+  text-align: center;
+}
+
+.settlement-dose-tag-preview {
+  min-width: 0;
+  max-width: 58px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #4f46e5;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.settlement-duration-input {
+  width: 58px;
+  text-align: right;
+}
+
+.settlement-duration-group span,
+.settlement-shortcut-group span,
+.settlement-price-group span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.settlement-shortcut-input {
+  width: 34px;
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
+}
+
+.settlement-price-input {
+  width: 104px;
+  text-align: right;
+}
+
+.settlement-color-input {
+  width: 34px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid #d5dee9;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.settlement-visit-lower-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settlement-delete-btn {
+  height: 32px;
+  border: 1px solid #f0c7c7;
+  border-radius: 9px;
+  background: #fff7f7;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.settlement-delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.settlement-add-input {
+  width: calc(100% - 28px);
+  margin: 12px 14px 14px;
+}
+
+@media (max-width: 1100px) {
+  .settlement-settings-pro-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-settings-actions {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 768px) {
+  .sw-settlement-settings-card.settlement-settings-pro {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .settlement-settings-pro-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+
+  .settlement-settings-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-incentive-control {
+    justify-content: space-between;
+  }
+
+  .settlement-settings-pro-grid {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .settlement-prescription-table {
+    min-width: 720px;
+  }
+}

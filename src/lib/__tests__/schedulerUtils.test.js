@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import {
   applyVisitCountToSchedulerContent,
   buildSchedulerCellDisplay,
+  getEffectiveSchedulerVisitInput,
+  getEffectiveSchedulerVisitSuffix,
   getNonVisitParentheticalSuffix,
   normalizeSchedulerVisitSuffix,
   stepVisitShortcutInputValue,
@@ -90,6 +92,22 @@ describe('scheduler cell display splitting', () => {
       visitSuffix: '',
       hasDisplayText: true,
     });
+  });
+
+  it('reads visit counts from the lower child row for split merged cells', () => {
+    const args = {
+      key: '0-1-3-2',
+      content: '24/이이이40',
+      mergeSpan: { rowSpan: 2, colSpan: 1 },
+      prescription: '40분',
+      memos: {
+        '0-1-4-2': { content: '(4)' },
+      },
+      visitOnLowerRowByPrescription: { '40분': true },
+    };
+
+    assert.equal(getEffectiveSchedulerVisitInput(args), '4');
+    assert.equal(getEffectiveSchedulerVisitSuffix(args), '(4)');
   });
 });
 

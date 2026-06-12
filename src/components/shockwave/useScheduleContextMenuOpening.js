@@ -5,9 +5,9 @@ import { supabase } from '../../lib/supabaseClient';
 import {
   addBodyPartToMap,
   getBodyPartOptionsFromMergeSpan,
+  getEffectiveSchedulerVisitInput,
   getMemoListFromMergeSpan,
   getReservationTimeFromMergeSpan,
-  getSchedulerVisitInputValue,
   parseSchedulerPatientIdentity,
   splitBodyParts,
 } from '../../lib/schedulerUtils';
@@ -19,8 +19,10 @@ export default function useScheduleContextMenuOpening({
   memos,
   normalizeCellToMergeMaster,
   pendingDisplayValues,
+  pendingMergeSpans,
   selectSingleCell,
   selectedKeys,
+  visitOnLowerRowByPrescription = {},
   setActiveContextSubmenu,
   setContextMenu,
   setContextMenuBodyInput,
@@ -132,6 +134,9 @@ export default function useScheduleContextMenuOpening({
     }
     const currentMemo = {
       ...(memos[key] || {}),
+      ...(Object.prototype.hasOwnProperty.call(pendingMergeSpans || {}, key)
+        ? { merge_span: pendingMergeSpans[key] }
+        : {}),
       ...(Object.prototype.hasOwnProperty.call(pendingDisplayValues || {}, key)
         ? { content: String(pendingDisplayValues[key] ?? '') }
         : {}),
@@ -143,7 +148,15 @@ export default function useScheduleContextMenuOpening({
     setContextMenuBodyInput('');
     setContextMenuNoteInput('');
     setContextMenuMemoDrafts(getMemoListFromMergeSpan(currentMemo?.merge_span));
-    setContextMenuVisitInput(getSchedulerVisitInputValue(currentMemo?.content || ''));
+    setContextMenuVisitInput(getEffectiveSchedulerVisitInput({
+      key,
+      content: currentMemo?.content || '',
+      mergeSpan: currentMemo?.merge_span,
+      prescription: currentMemo?.prescription || currentPrescription || currentMemo?.merge_span?.meta?.prescription || '',
+      memos,
+      pendingDisplayValues,
+      visitOnLowerRowByPrescription,
+    }));
     const defaultReservationTime = slotTime || getDefaultReservationTime(targetCell.w, targetCell.d, targetCell.r);
     const savedReservationTime = getReservationTimeFromMergeSpan(currentMemo?.merge_span);
     setContextMenuReservationInput(savedReservationTime || defaultReservationTime);
@@ -191,8 +204,10 @@ export default function useScheduleContextMenuOpening({
     memos,
     normalizeCellToMergeMaster,
     pendingDisplayValues,
+    pendingMergeSpans,
     selectSingleCell,
     selectedKeys,
+    visitOnLowerRowByPrescription,
     setActiveContextSubmenu,
     setContextMenu,
     setContextMenuBodyInput,

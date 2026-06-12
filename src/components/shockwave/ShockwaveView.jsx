@@ -13,6 +13,7 @@ import { inheritMonthlyTherapistsFromPreviousRows } from '../../lib/monthlyThera
 import { get4060PrescriptionFromContent, has4060Pattern, normalize4060StarOrder } from '../../lib/schedulerContentFormat';
 import { getMonthlyDayOverrides } from '../../lib/schedulerOperatingHours';
 import {
+  buildVisibleTherapistRangeKeys,
   getFocusedDayColumnWidth,
   getScheduleDateHeaderLabel,
   getTherapistGridTemplate,
@@ -78,6 +79,7 @@ import {
   getNonVisitParentheticalSuffix,
   addBodyPartToMap,
   getExplicitVisitSuffix,
+  getEffectiveSchedulerVisitSuffix,
 } from '../../lib/schedulerUtils';
 
 function SchedulerSettingsIcon() {
@@ -1367,13 +1369,25 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     getEffectiveMergeSpan,
     normalizeCellToMergeMaster,
     normalizeKeysToMergeMasters,
-    buildRangeKeys,
+    buildRangeKeys: buildRawRangeKeys,
   } = useScheduleSelectionModel({
     selectedCell,
     selectedKeys,
     memos: effectiveMemos,
     pendingMergeSpans,
   });
+
+  const buildRangeKeys = useCallback((anchor, target) => {
+    const visibleRangeKeys = buildVisibleTherapistRangeKeys({
+      anchor,
+      target,
+      weeks,
+      visibleTherapistSlots,
+      cellKey,
+      normalizeCell: normalizeCellToMergeMaster,
+    });
+    return visibleRangeKeys || buildRawRangeKeys(anchor, target);
+  }, [buildRawRangeKeys, cellKey, normalizeCellToMergeMaster, visibleTherapistSlots, weeks]);
 
   const scheduleEditDraftAutosave = useCallback((key, value) => {
     setPendingDisplayValues((prev) => ({ ...prev, [key]: value ?? '' }));
@@ -1730,8 +1744,10 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     memos: effectiveMemos,
     normalizeCellToMergeMaster,
     pendingDisplayValues,
+    pendingMergeSpans,
     selectSingleCell,
     selectedKeys,
+    visitOnLowerRowByPrescription,
     setActiveContextSubmenu,
     setContextMenu,
     setContextMenuBodyInput,
@@ -2690,17 +2706,16 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
                             colSpan: isSingleTherapistFocused ? 1 : mergeSpan.colSpan,
                           };
 
-                          // overrideVisitSuffix 계산
-                          let overrideVisitSuffix = undefined;
                           const cellPrescription = displayCellData?.prescription || finalMergeSpan?.meta?.prescription || '';
-                          const isVisitOnLowerRow = cellPrescription ? !!visitOnLowerRowByPrescription[cellPrescription] : false;
-                          if (visualRowSpan > 1 && isVisitOnLowerRow) {
-                            const lastChildKey = cellKey(weekIdx, dayIdx, rowIdx + mergeSpan.rowSpan - 1, colIdx);
-                            const lastChildContent = pendingDisplayValues[lastChildKey] ?? renderMemos[lastChildKey]?.content ?? '';
-                            if (lastChildContent.trim()) {
-                              overrideVisitSuffix = lastChildContent.trim();
-                            }
-                          }
+                          const overrideVisitSuffix = getEffectiveSchedulerVisitSuffix({
+                            key,
+                            content,
+                            mergeSpan: finalMergeSpan,
+                            prescription: cellPrescription,
+                            memos: renderMemos,
+                            pendingDisplayValues,
+                            visitOnLowerRowByPrescription,
+                          }) || undefined;
 
                           const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
                           const therapistName = getTherapistNameForDate(colIdx, dayInfo.day, dayInfo) || '';
@@ -3682,9 +3697,23 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
           const { weekIdx, dayIdx, rowIdx, colIdx, staffBlockRule, slotInfo, selectionInfo } = hoverCell;
           const keyStr = cellKey(weekIdx, dayIdx, rowIdx, colIdx);
           const cellData = renderMemos[keyStr] || {};
+          const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
           const content = typeof pendingDisplayValues[keyStr] === 'string' ? pendingDisplayValues[keyStr] : cellData.content;
-          const hasHoverContent = Boolean(String(content || '').trim() && content !== '\u200B');
           const cellPrescription = cellData.prescription || '';
+          const effectiveVisitSuffix = getEffectiveSchedulerVisitSuffix({
+            key: keyStr,
+            content,
+            mergeSpan: mergeSpanForHover,
+            prescription: cellPrescription,
+            memos: renderMemos,
+            pendingDisplayValues,
+            visitOnLowerRowByPrescription,
+          });
+          const trimmedContent = String(content || '').trim();
+          const displayContent = effectiveVisitSuffix && trimmedContent && !trimmedContent.endsWith(effectiveVisitSuffix)
+            ? `${trimmedContent}${effectiveVisitSuffix}`
+            : content;
+          const hasHoverContent = Boolean(String(displayContent || '').trim() && displayContent !== '\u200B');
           
           const isSelectionHover = selectionInfo && selectionInfo.w === weekIdx && selectionInfo.d === dayIdx && selectionInfo.minRow !== selectionInfo.maxRow && selectedKeys && selectedKeys.has(keyStr);
           
@@ -3709,20 +3738,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
               if (mns > 0) dStr += (hrs > 0 ? ' ' : '') + `${mns}분`;
               
               text = `⏱ ${t1} ~ ${t2} (총 ${dStr})`;
-              if (hasHoverContent) text += `\n👤 ${content}`;
+              if (hasHoverContent) text += `\n👤 ${displayContent}`;
             } else {
-              const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
               const optimisticCellData = { ...cellData, merge_span: mergeSpanForHover };
               const reservationTime = getReservationTimeForMemo(optimisticCellData, weekIdx, dayIdx, rowIdx);
               text = `⏱ ${reservationTime || slotInfo.label}`;
-              if (hasHoverContent) text += `\n👤 ${content}`;
+              if (hasHoverContent) text += `\n👤 ${displayContent}`;
             }
           } else {
-            const mergeSpanForHover = pendingMergeSpans[keyStr] || cellData.merge_span;
             const optimisticCellData = { ...cellData, merge_span: mergeSpanForHover };
             const reservationTime = getReservationTimeForMemo(optimisticCellData, weekIdx, dayIdx, rowIdx);
             text = `⏱ ${reservationTime || slotInfo.label}`;
-            if (hasHoverContent) text += `\n👤 ${content}`;
+            if (hasHoverContent) text += `\n👤 ${displayContent}`;
           }
           
           if (staffBlockRule) text += `\n근무표: ${staffBlockRule.keyword}`;

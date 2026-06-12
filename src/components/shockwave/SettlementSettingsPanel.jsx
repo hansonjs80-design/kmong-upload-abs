@@ -309,22 +309,50 @@ export default function SettlementSettingsPanel({
 
   return (
     <div className="sw-stats-body sw-stats-body--settlement">
-      <div className="sw-settlement-card sw-settlement-settings-card">
-        <div className="sw-settlement-header">
-          <div>
-            <h2>{year}년 {String(month).padStart(2, '0')}월 {title}</h2>
-            <p className="sw-settlement-settings-subtext">{sourceText}</p>
+      <div className="sw-settlement-card sw-settlement-settings-card settlement-settings-pro">
+        <div className="settlement-settings-pro-header">
+          <div className="settlement-settings-title-block">
+            <span className="settlement-settings-kicker">
+              {year}년 {String(month).padStart(2, '0')}월
+            </span>
+            <h2>{title}</h2>
+            <p>{sourceText}</p>
           </div>
-          <button type="button" className="btn btn-primary" onClick={handleSave}>
-            이번 달 설정 저장
-          </button>
+          <div className="settlement-settings-actions">
+            <label className="settlement-incentive-control">
+              <span>인센티브</span>
+              <div>
+                <input
+                  type="number"
+                  className="form-input"
+                  min={0}
+                  step={0.1}
+                  value={draft.incentive_percentage}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    setDraft((prev) => ({
+                      ...prev,
+                      incentive_percentage: Number.isFinite(value) ? value : 0,
+                    }));
+                  }}
+                />
+                <em>%</em>
+              </div>
+            </label>
+            <button type="button" className="btn btn-primary settlement-save-btn" onClick={handleSave}>
+              이번 달 설정 저장
+            </button>
+          </div>
         </div>
 
-        <div className="settlement-settings-grid">
-          <section className="settlement-therapist-picker">
-            <div className="settlement-section-heading">
-              <strong>통계 치료사</strong>
-              <span>스케줄 셀에서 확인된 치료사 중 통계에 표시할 이름과 순서를 정합니다.</span>
+        <div className="settlement-settings-pro-grid">
+          <section className="settlement-settings-panel settlement-therapist-picker">
+            <div className="settlement-panel-head">
+              <div>
+                <strong>통계 치료사</strong>
+                <span>표시할 치료사와 순서</span>
+              </div>
+              <small>{effectiveSelectedTherapistNames.length}명 선택</small>
             </div>
             {normalizedTherapistOptions.length === 0 ? (
               <p className="settlement-empty-hint">완료된 스케줄 기록이 생기면 치료사 이름이 여기에 표시됩니다.</p>
@@ -346,17 +374,19 @@ export default function SettlementSettingsPanel({
                       <div className="settlement-therapist-order">
                         <button
                           type="button"
-                          className="btn btn-secondary btn-xs"
+                          className="settlement-icon-btn"
                           disabled={!isSelected || selectedIndex <= 0}
                           onClick={() => moveTherapistName(selectedIndex, -1)}
+                          title="위로 이동"
                         >
                           ↑
                         </button>
                         <button
                           type="button"
-                          className="btn btn-secondary btn-xs"
+                          className="settlement-icon-btn"
                           disabled={!isSelected || selectedIndex < 0 || selectedIndex >= effectiveSelectedTherapistNames.length - 1}
                           onClick={() => moveTherapistName(selectedIndex, 1)}
+                          title="아래로 이동"
                         >
                           ↓
                         </button>
@@ -368,145 +398,151 @@ export default function SettlementSettingsPanel({
             )}
           </section>
 
-          <div className="settlement-settings-list">
-            <div className="settlement-section-heading">
-              <strong>처방 설정</strong>
-              <span>처방명, 셀 태그, 병합 시간, 단축키, 색상은 스케줄 셀 입력에도 같이 반영됩니다.</span>
+          <section className="settlement-settings-panel settlement-prescription-panel">
+            <div className="settlement-panel-head">
+              <div>
+                <strong>처방 설정</strong>
+                <span>스케줄 입력, 병합, 단축키와 연동</span>
+              </div>
+              <small>{draft.prescriptions.length}개 처방</small>
             </div>
-            <div className="settlement-settings-row settlement-settings-header-row treatment-row">
-              <span className="settlement-label" style={{ flex: '1 1 100px' }}>처방 이름</span>
-              <span className="settlement-label" style={{ width: 84, textAlign: 'center' }}>셀 태그</span>
-              <span className="settlement-label" style={{ width: 76, textAlign: 'center' }}>치료시간</span>
-              <span className="settlement-label" style={{ width: 64, textAlign: 'center' }}>단축키</span>
-              <span className="settlement-label" style={{ width: 110, textAlign: 'center' }}>단가</span>
-              <span className="settlement-label" style={{ width: 32, textAlign: 'center' }}>색</span>
-              <span className="settlement-label" style={{ width: 52, textAlign: 'center' }}>회차↓</span>
-              <span style={{ width: 16 }}></span>
-              <span style={{ width: 44 }}></span>
-            </div>
-            {draft.prescriptions.map((prescription, index) => {
-              const doseTag = getDoseTag(prescription);
-              const durationMinutes = getDurationMinutes(prescription);
-              return (
-                <div key={`${prescription}-${index}`} className="settlement-settings-row treatment-row">
-                  <input
-                    className="form-input settlement-prescription-input"
-                    value={prescription}
-                    onChange={(event) => updatePrescription(index, event.target.value)}
-                  />
-                  <div className="settlement-dose-tag-group">
+            <div className="settlement-prescription-table">
+              <div className="settlement-prescription-head">
+                <span>처방</span>
+                <span>셀 태그</span>
+                <span>시간</span>
+                <span>단축키</span>
+                <span>단가</span>
+                <span>색</span>
+                <span>회차</span>
+                <span></span>
+              </div>
+              {draft.prescriptions.map((prescription, index) => {
+                const doseTag = getDoseTag(prescription);
+                const durationMinutes = getDurationMinutes(prescription);
+                return (
+                  <div key={`${prescription}-${index}`} className="settlement-prescription-row">
                     <input
-                      className="form-input settlement-dose-tag-input"
-                      value={doseTag}
-                      placeholder="없음"
-                      title={doseTag ? `스케줄 셀에 "주한솔${doseTag}" 형태로 표시` : '셀 태그 없음 (이름만 표시)'}
-                      onChange={(event) => {
-                        const val = event.target.value.replace(/[^\d]/g, '').slice(0, 3);
-                        setDraft((prev) => ({
-                          ...prev,
-                          dose_tags: { ...prev.dose_tags, [prescription]: val },
-                        }));
-                      }}
+                      className="form-input settlement-prescription-input"
+                      value={prescription}
+                      onChange={(event) => updatePrescription(index, event.target.value)}
                     />
-                    <span className="settlement-dose-tag-preview" title="셀 미리보기">
-                      홍길동{doseTag}
-                    </span>
-                  </div>
-                  <div className="settlement-duration-group">
+                    <div className="settlement-dose-tag-group">
+                      <input
+                        className="form-input settlement-dose-tag-input"
+                        value={doseTag}
+                        placeholder="없음"
+                        title={doseTag ? `스케줄 셀에 "주한솔${doseTag}" 형태로 표시` : '셀 태그 없음 (이름만 표시)'}
+                        onChange={(event) => {
+                          const val = event.target.value.replace(/[^\d]/g, '').slice(0, 3);
+                          setDraft((prev) => ({
+                            ...prev,
+                            dose_tags: { ...prev.dose_tags, [prescription]: val },
+                          }));
+                        }}
+                      />
+                      <span className="settlement-dose-tag-preview" title="셀 미리보기">
+                        홍길동{doseTag}
+                      </span>
+                    </div>
+                    <div className="settlement-duration-group">
+                      <input
+                        type="number"
+                        className="form-input settlement-duration-input"
+                        min={0}
+                        step={5}
+                        value={durationMinutes || ''}
+                        placeholder="분"
+                        title="스케줄 시간 간격에 맞춰 자동 병합할 치료 시간"
+                        onChange={(event) => {
+                          const val = Number(event.target.value);
+                          setDraft((prev) => ({
+                            ...prev,
+                            duration_minutes: {
+                              ...(prev.duration_minutes || {}),
+                              [prescription]: Number.isFinite(val) && val > 0 ? val : '',
+                            },
+                          }));
+                        }}
+                      />
+                      <span>분</span>
+                    </div>
+                    <div className="settlement-shortcut-group">
+                      <span>Cmd+</span>
+                      <input
+                        className="form-input settlement-shortcut-input"
+                        value={draft.shortcuts?.[prescription] || ''}
+                        placeholder="-"
+                        title="Cmd/Ctrl + 숫자 로 처방 단축키 설정"
+                        maxLength={1}
+                        onChange={(event) => {
+                          const val = event.target.value.replace(/[^1-9]/g, '');
+                          setDraft((prev) => ({
+                            ...prev,
+                            shortcuts: { ...(prev.shortcuts || {}), [prescription]: val },
+                          }));
+                        }}
+                      />
+                    </div>
+                    <div className="settlement-price-group">
+                      <input
+                        type="number"
+                        className="form-input settlement-price-input"
+                        min={0}
+                        step={1000}
+                        value={draft.prescription_prices?.[prescription] ?? 0}
+                        onChange={(event) => {
+                          const value = Number(event.target.value) || 0;
+                          setDraft((prev) => ({
+                            ...prev,
+                            prescription_prices: {
+                              ...prev.prescription_prices,
+                              [prescription]: value,
+                            },
+                          }));
+                        }}
+                      />
+                      <span>원</span>
+                    </div>
                     <input
-                      type="number"
-                      className="form-input settlement-duration-input"
-                      min={0}
-                      step={5}
-                      value={durationMinutes || ''}
-                      placeholder="분"
-                      title="스케줄 시간 간격에 맞춰 자동 병합할 치료 시간"
+                      type="color"
+                      className="settlement-color-input"
+                      value={draft.prescription_colors?.[prescription] || '#000000'}
+                      title={`${prescription} 스케줄러 글자색`}
                       onChange={(event) => {
-                        const val = Number(event.target.value);
+                        const value = event.target.value;
                         setDraft((prev) => ({
                           ...prev,
-                          duration_minutes: {
-                            ...(prev.duration_minutes || {}),
-                            [prescription]: Number.isFinite(val) && val > 0 ? val : '',
+                          prescription_colors: {
+                            ...(prev.prescription_colors || {}),
+                            [prescription]: value,
                           },
                         }));
                       }}
                     />
-                    <span className="settlement-duration-unit">분</span>
+                    <label className="settlement-visit-lower-row" title="병합 시 회차를 하단 행에 분리 입력">
+                      <input
+                        type="checkbox"
+                        checked={!!draft.visit_on_lower_row?.[prescription]}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setDraft((prev) => ({
+                            ...prev,
+                            visit_on_lower_row: {
+                              ...(prev.visit_on_lower_row || {}),
+                              [prescription]: checked,
+                            },
+                          }));
+                        }}
+                      />
+                    </label>
+                    <button type="button" className="settlement-delete-btn" onClick={() => removePrescription(index)}>
+                      삭제
+                    </button>
                   </div>
-                  <div className="settlement-shortcut-group">
-                    <span className="settlement-shortcut-prefix">Cmd+</span>
-                    <input
-                      className="form-input settlement-shortcut-input"
-                      value={draft.shortcuts?.[prescription] || ''}
-                      placeholder="—"
-                      title="Cmd/Ctrl + 숫자 로 처방 단축키 설정"
-                      maxLength={1}
-                      onChange={(event) => {
-                        const val = event.target.value.replace(/[^1-9]/g, '');
-                        setDraft((prev) => ({
-                          ...prev,
-                          shortcuts: { ...(prev.shortcuts || {}), [prescription]: val },
-                        }));
-                      }}
-                    />
-                  </div>
-                  <input
-                    type="number"
-                    className="form-input settlement-price-input"
-                    min={0}
-                    step={1000}
-                    value={draft.prescription_prices?.[prescription] ?? 0}
-                    onChange={(event) => {
-                      const value = Number(event.target.value) || 0;
-                      setDraft((prev) => ({
-                        ...prev,
-                        prescription_prices: {
-                          ...prev.prescription_prices,
-                          [prescription]: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <input
-                    type="color"
-                    className="settlement-color-input"
-                    value={draft.prescription_colors?.[prescription] || '#000000'}
-                    title={`${prescription} 스케줄러 글자색`}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setDraft((prev) => ({
-                        ...prev,
-                        prescription_colors: {
-                          ...(prev.prescription_colors || {}),
-                          [prescription]: value,
-                        },
-                      }));
-                    }}
-                  />
-                  <span className="settlement-settings-unit">원</span>
-                  <label className="settlement-visit-lower-row" title="병합 시 회차를 하단 행에 분리 입력">
-                    <input
-                      type="checkbox"
-                      checked={!!draft.visit_on_lower_row?.[prescription]}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setDraft((prev) => ({
-                          ...prev,
-                          visit_on_lower_row: {
-                            ...(prev.visit_on_lower_row || {}),
-                            [prescription]: checked,
-                          },
-                        }));
-                      }}
-                    />
-                  </label>
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => removePrescription(index)}>
-                    삭제
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
             <input
               className="form-input settlement-add-input"
               placeholder={addPlaceholder}
@@ -515,28 +551,7 @@ export default function SettlementSettingsPanel({
                 if (addPrescription(event.currentTarget.value)) event.currentTarget.value = '';
               }}
             />
-          </div>
-
-          <label className="settlement-incentive-box">
-            <span>인센티브</span>
-            <div>
-              <input
-                type="number"
-                className="form-input"
-                min={0}
-                step={0.1}
-                value={draft.incentive_percentage}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  setDraft((prev) => ({
-                    ...prev,
-                    incentive_percentage: Number.isFinite(value) ? value : 0,
-                  }));
-                }}
-              />
-              <em>%</em>
-            </div>
-          </label>
+          </section>
         </div>
       </div>
     </div>
