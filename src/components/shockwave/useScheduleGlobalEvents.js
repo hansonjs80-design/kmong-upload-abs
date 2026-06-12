@@ -14,6 +14,7 @@ export default function useScheduleGlobalEvents({
   handleOpenPatientHistoryModal,
   isEditableTarget,
   isContextMenuTarget,
+  isLongPressDismissGuardActive,
   setActiveContextSubmenu,
   setContextMenu,
 }) {
@@ -116,10 +117,11 @@ export default function useScheduleGlobalEvents({
 
   useEffect(() => {
     const handleWindowClick = (event) => {
+      if (isLongPressDismissGuardActive?.()) return;
       if (contextMenuRef.current?.contains(event.target)) return;
       setContextMenu(null);
     };
     window.addEventListener('click', handleWindowClick);
     return () => window.removeEventListener('click', handleWindowClick);
-  }, [contextMenuRef, setContextMenu]);
+  }, [contextMenuRef, isLongPressDismissGuardActive, setContextMenu]);
 }

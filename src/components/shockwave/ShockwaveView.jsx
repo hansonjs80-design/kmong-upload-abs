@@ -112,6 +112,7 @@ const PATIENT_HISTORY_GROUPS = [
 
 const MOBILE_DOUBLE_TAP_MS = 320;
 const MOBILE_LONG_PRESS_MS = 520;
+const MOBILE_LONG_PRESS_DISMISS_GUARD_MS = 1200;
 /** 롱프레스로 컨텍스트 메뉴가 열린 직후 합성 mousedown 이벤트를 무시하기 위한 타임스탬프 가드 */
 let _longPressContextMenuGuardTs = 0;
 const COMPACT_TIME_LABEL_ROW_HEIGHT = 18;
@@ -1295,11 +1296,15 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     return Boolean(target && contextMenuRef.current?.contains(target));
   }, []);
 
+  const isLongPressDismissGuardActive = useCallback(() => (
+    Date.now() - _longPressContextMenuGuardTs < MOBILE_LONG_PRESS_DISMISS_GUARD_MS
+  ), []);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (!contextMenu) return;
-      // 롱프레스 직후 합성 mousedown 이벤트 무시 (600ms 가드)
-      if (e.type === 'mousedown' && Date.now() - _longPressContextMenuGuardTs < 600) return;
+      // 롱프레스 직후 합성 mousedown/touchstart 이벤트 무시
+      if (isLongPressDismissGuardActive()) return;
       if (!isContextMenuTarget(e.target)) {
         setContextMenu(null);
       }
@@ -1310,7 +1315,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [contextMenu, isContextMenuTarget]);
+  }, [contextMenu, isContextMenuTarget, isLongPressDismissGuardActive]);
 
   const {
     buildMemoSnapshotForKeys,
@@ -1475,7 +1480,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     }
     if (e?.button !== 0) return;
     // 롱프레스 직후 브라우저 합성 mousedown 이벤트 → 전체 무시
-    if (Date.now() - _longPressContextMenuGuardTs < 600) return;
+    if (isLongPressDismissGuardActive()) return;
     e.preventDefault();
 
     setContextMenu(null);
@@ -2177,6 +2182,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     handleOpenPatientHistoryModal,
     isEditableTarget,
     isContextMenuTarget,
+    isLongPressDismissGuardActive,
     setActiveContextSubmenu,
     setContextMenu,
   });
