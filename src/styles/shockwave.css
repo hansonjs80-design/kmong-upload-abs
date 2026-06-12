@@ -831,7 +831,7 @@
   z-index: 100 !important;
 }
 
-.sw-cell.editing.compact-editing {
+.sw-cell.compact-editing {
   z-index: 140 !important;
 }
 
@@ -850,7 +850,7 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-.sw-cell.editing.compact-editing .sw-cell-input-wrapper {
+.sw-cell.compact-editing .sw-cell-input-wrapper {
   height: max(calc(var(--sw-row-height) * 2 + 2px), 28px);
   min-height: 28px;
   border-radius: 4px;

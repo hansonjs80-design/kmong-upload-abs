@@ -582,8 +582,9 @@ const MemoizedCell = memo(({
   }, [clearLongPressTimer, colIdx, content, dayIdx, handleCellDoubleClick, rowIdx, weekIdx]);
 
   if (showInput) {
+    const isInputActive = isEditing || isImePreview;
     return (
-      <div id={`cell-${cellKey}`} className={`sw-cell ${isEditing ? 'editing' : ''} ${compactEditingInput && isEditing ? 'compact-editing' : ''} ${cls}`} style={inlineStyle}
+      <div id={`cell-${cellKey}`} className={`sw-cell ${isInputActive ? 'editing' : ''} ${compactEditingInput && isInputActive ? 'compact-editing' : ''} ${cls}`} style={inlineStyle}
         onMouseDown={(e) => { handleCellMouseDown(weekIdx, dayIdx, rowIdx, colIdx, e); }}
         onMouseEnter={() => {
           handleCellMouseEnter(weekIdx, dayIdx, rowIdx, colIdx);
