@@ -9,7 +9,8 @@ import {
 } from '../../lib/schedulerUtils';
 
 const MIN_SCHEDULE_ROW_HEIGHT = 5;
-const ROW_HEIGHT_DRAG_SENSITIVITY = 0.5;
+const ROW_HEIGHT_DRAG_SENSITIVITY = 0.25;
+const ROW_HEIGHT_STEP = 0.25;
 const MIN_SCHEDULE_DAY_WIDTH = 100;
 const MIN_SCHEDULE_DAY_WIDTH_MOBILE = 70;
 const MIN_FOCUSED_DAY_WIDTH = 97;
@@ -62,7 +63,7 @@ const maybeLockMobileResize = (event) => {
 
 const clampRowHeight = (value) => Math.max(
   MIN_SCHEDULE_ROW_HEIGHT,
-  Math.round(Number(value || MIN_SCHEDULE_ROW_HEIGHT) * 2) / 2
+  Math.round(Number(value || MIN_SCHEDULE_ROW_HEIGHT) / ROW_HEIGHT_STEP) * ROW_HEIGHT_STEP
 );
 
 export default function useScheduleResizeState({ colCount }) {
