@@ -117,7 +117,7 @@ const MOBILE_LONG_PRESS_DISMISS_GUARD_MS = 1200;
 let _longPressContextMenuGuardTs = 0;
 const COMPACT_TIME_LABEL_ROW_HEIGHT = 18;
 const COMPACT_EDITING_INPUT_ROW_HEIGHT = 10;
-const COMPACT_TIME_LABEL_MERGE_ROW_HEIGHT = 8;
+const COMPACT_TIME_LABEL_MERGE_ROW_HEIGHT = 7;
 
 /**
  * 행 높이에 따라 시간 레이블을 읽을 수 있도록 몇 개 행을 병합할지 계산합니다.
