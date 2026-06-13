@@ -117,11 +117,11 @@ const MOBILE_LONG_PRESS_DISMISS_GUARD_MS = 1200;
 let _longPressContextMenuGuardTs = 0;
 const COMPACT_TIME_LABEL_ROW_HEIGHT = 18;
 const COMPACT_EDITING_INPUT_ROW_HEIGHT = 10;
-const COMPACT_TIME_LABEL_MERGE_ROW_HEIGHT = 6;
+const COMPACT_TIME_LABEL_MERGE_ROW_HEIGHT = 9;
 
 /**
  * 행 높이에 따라 시간 레이블을 읽을 수 있도록 몇 개 행을 병합할지 계산합니다.
- * 예: 10분 간격, rowHeight=6px → 2행 병합 (20분 단위 표시)
+ * 예: 10분 간격, rowHeight=9px → 2행 병합 (20분 단위 표시)
  *     10분 간격, rowHeight=5px → 3행 병합 (30분 단위 표시)
  */
 const MIN_READABLE_TIME_LABEL_HEIGHT = 12;
@@ -2118,6 +2118,63 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setActiveContextSubmenu('body');
   }, [selectedCell, cellKey, effectiveMemos, handleCellContextMenu, setActiveContextSubmenu, setContextMenu, getEffectiveMergeSpan]);
 
+  const handleKeyboardSelectionMoved = useCallback((cell, movedKeys = []) => {
+    if (!cell) return;
+    const dayInfo = weeks?.[cell.w]?.[cell.d];
+    if (!dayInfo) return;
+
+    const daySlots = getTimeSlotsForDay(dayInfo);
+    const slotInfo = daySlots[cell.r] || daySlots.find((slot) => slot.idx === cell.r);
+    if (!slotInfo) return;
+
+    const dateKey = `${dayInfo.year}-${dayInfo.month}-${dayInfo.day}`;
+    const therapistName = getTherapistNameForDate(cell.c, dayInfo.day, dayInfo) || '';
+    const staffBlockRule = getStaffScheduleBlockForCell(dateKey, therapistName, slotInfo.time);
+
+    const movedCells = movedKeys
+      .map((key) => key.split('-').map(Number))
+      .filter((parts) => parts.length === 4 && parts.every(Number.isFinite))
+      .map(([w, d, r, c]) => ({ w, d, r, c }))
+      .filter((item) => item.w === cell.w && item.d === cell.d);
+    const selectionHoverInfo = movedCells.length > 1
+      ? {
+          w: cell.w,
+          d: cell.d,
+          minRow: Math.min(...movedCells.map((item) => item.r)),
+          maxRow: Math.max(...movedCells.map((item) => item.r)),
+          minCol: Math.min(...movedCells.map((item) => item.c)),
+          maxCol: Math.max(...movedCells.map((item) => item.c)),
+        }
+      : null;
+
+    const nextHoverCell = {
+      weekIdx: cell.w,
+      dayIdx: cell.d,
+      rowIdx: cell.r,
+      colIdx: cell.c,
+      staffBlockRule,
+      slotInfo,
+      selectionInfo: selectionHoverInfo,
+      isKeyboardMove: true,
+    };
+    setHoverCell(nextHoverCell);
+
+    window.requestAnimationFrame(() => {
+      const targetEl = document.getElementById(`cell-${cellKey(cell.w, cell.d, cell.r, cell.c)}`);
+      if (!targetEl) return;
+      const rect = targetEl.getBoundingClientRect();
+      tooltipMousePosRef.current = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+      setHoverCell((prev) => (
+        prev && prev.weekIdx === cell.w && prev.dayIdx === cell.d && prev.rowIdx === cell.r && prev.colIdx === cell.c
+          ? { ...prev, keyboardMoveTick: Date.now() }
+          : prev
+      ));
+    });
+  }, [cellKey, getStaffScheduleBlockForCell, getTherapistNameForDate, getTimeSlotsForDay, weeks]);
+
   const handleKeyDown = useScheduleKeyboardActions({
     contextMenu,
     clipboardSource,
@@ -2167,6 +2224,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, onLoad
     setContextMenu,
     getDefaultReservationTime,
     handleOpenBodyPartMenu,
+    onSelectionMoved: handleKeyboardSelectionMoved,
     treatmentMergeOptions,
   });
 
