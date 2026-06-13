@@ -117,14 +117,14 @@ const MOBILE_LONG_PRESS_DISMISS_GUARD_MS = 1200;
 let _longPressContextMenuGuardTs = 0;
 const COMPACT_TIME_LABEL_ROW_HEIGHT = 18;
 const COMPACT_EDITING_INPUT_ROW_HEIGHT = 10;
-const COMPACT_TIME_LABEL_MERGE_ROW_HEIGHT = 7;
+const COMPACT_TIME_LABEL_MERGE_ROW_HEIGHT = 6;
 
 /**
  * 행 높이에 따라 시간 레이블을 읽을 수 있도록 몇 개 행을 병합할지 계산합니다.
- * 예: 10분 간격, rowHeight=8px → 2행 병합 (20분 단위 표시)
+ * 예: 10분 간격, rowHeight=6px → 2행 병합 (20분 단위 표시)
  *     10분 간격, rowHeight=5px → 3행 병합 (30분 단위 표시)
  */
-const MIN_READABLE_TIME_LABEL_HEIGHT = 14;
+const MIN_READABLE_TIME_LABEL_HEIGHT = 12;
 
 const getCompactMergeInterval = (rh) => {
   const rowH = Number(rh);
